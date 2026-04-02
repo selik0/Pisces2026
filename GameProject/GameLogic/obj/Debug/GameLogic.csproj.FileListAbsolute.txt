@@ -1,0 +1,12 @@
+D:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameLogic.deps.json
+D:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameLogic.dll
+D:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameLogic.pdb
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.csproj.AssemblyReference.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.GeneratedMSBuildEditorConfig.editorconfig
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.AssemblyInfoInputs.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.AssemblyInfo.cs
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.csproj.CoreCompileInputs.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.sourcelink.json
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.csproj.Up2Date
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.dll
+D:\UnityWorkspace\Pisces2026\GameProject\GameLogic\obj\Debug\GameLogic.pdb

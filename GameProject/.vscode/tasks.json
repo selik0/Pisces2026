@@ -1,0 +1,73 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Generate GameProject Solution",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "new",
+        "sln",
+        "-n",
+        "GameProject",
+        "--force"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/GameProject"
+      },
+      "group": "none",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Build GameProject Solution",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "GameProject.sln",
+        "-c",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/GameProject"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Clean GameProject Solution",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "clean",
+        "GameProject.sln",
+        "-c",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/GameProject"
+      },
+      "group": "none",
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

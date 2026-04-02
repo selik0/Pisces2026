@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <OutputPath>..\..\GameClient\Assets\LogicDll\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,11 @@
+d:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameNative.deps.json
+D:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameNative.dll
+D:\UnityWorkspace\Pisces2026\GameClient\Assets\LogicDll\GameNative.pdb
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.csproj.AssemblyReference.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.GeneratedMSBuildEditorConfig.editorconfig
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.AssemblyInfoInputs.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.AssemblyInfo.cs
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.csproj.CoreCompileInputs.cache
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.sourcelink.json
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.dll
+D:\UnityWorkspace\Pisces2026\GameProject\GameNative\obj\Debug\GameNative.pdb

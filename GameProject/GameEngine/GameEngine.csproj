@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>GameEngine</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 使用通配符引用 GameProject/lib 下所有 DLL -->
+    <Reference Include="..\lib\*.dll" />
+  </ItemGroup>
+</Project>

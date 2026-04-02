@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Hsldu9ge+rw=",
+  "success": true,
+  "projectFilePath": "d:\\UnityWorkspace\\Pisces2026\\GameProject\\GameProto\\GameProto.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\chenk\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
+    "C:\\Users\\chenk\\.nuget\\packages\\netstandard.library\\2.0.3\\netstandard.library.2.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

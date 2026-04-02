@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>GameLogic</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GameEngine\GameEngine.csproj" />
+    <ProjectReference Include="..\GameNative\GameNative.csproj" />
+    <ProjectReference Include="..\GameProto\GameProto.csproj" />
+    <!-- 使用通配符引用 GameProject/lib 下所有 DLL -->
+    <Reference Include="..\lib\*.dll" />
+  </ItemGroup>
+</Project>
