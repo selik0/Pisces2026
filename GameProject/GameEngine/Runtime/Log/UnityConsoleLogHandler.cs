@@ -19,14 +19,12 @@ namespace GameEngine
             switch (level)
             {
                 case LogLevel.Debug:
-                case LogLevel.Info:
                     Debug.Log(formatted);
                     break;
                 case LogLevel.Warning:
                     Debug.LogWarning(formatted);
                     break;
                 case LogLevel.Error:
-                case LogLevel.Fatal:
                     Debug.LogError(formatted);
                     break;
             }

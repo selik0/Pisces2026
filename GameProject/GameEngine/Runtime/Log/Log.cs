@@ -13,7 +13,7 @@ namespace GameEngine
     /// Log.Initialize();
     ///
     /// // 输出日志
-    /// Log.Info("游戏启动");
+    /// Log.Debug("游戏启动");
     /// Log.Warning("资源加载缓慢");
     /// Log.Error("网络连接失败", ex);
     ///
@@ -101,18 +101,6 @@ namespace GameEngine
             _default.Debug(message, ex);
         }
 
-        public static void Info(string message)
-        {
-            EnsureInitialized();
-            _default.Info(message);
-        }
-
-        public static void Info(string message, Exception ex)
-        {
-            EnsureInitialized();
-            _default.Info(message, ex);
-        }
-
         public static void Warning(string message)
         {
             EnsureInitialized();
@@ -135,18 +123,6 @@ namespace GameEngine
         {
             EnsureInitialized();
             _default.Error(message, ex);
-        }
-
-        public static void Fatal(string message)
-        {
-            EnsureInitialized();
-            _default.Fatal(message);
-        }
-
-        public static void Fatal(string message, Exception ex)
-        {
-            EnsureInitialized();
-            _default.Fatal(message, ex);
         }
 
         // ── 私有辅助 ─────────────────────────────────────────

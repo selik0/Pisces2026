@@ -45,12 +45,6 @@ namespace GameEngine
         public void Debug(string message, Exception ex) =>
             Write(LogLevel.Debug, message, ex);
 
-        public void Info(string message) =>
-            Write(LogLevel.Info, message);
-
-        public void Info(string message, Exception ex) =>
-            Write(LogLevel.Info, message, ex);
-
         public void Warning(string message) =>
             Write(LogLevel.Warning, message);
 
@@ -62,12 +56,6 @@ namespace GameEngine
 
         public void Error(string message, Exception ex) =>
             Write(LogLevel.Error, message, ex);
-
-        public void Fatal(string message) =>
-            Write(LogLevel.Fatal, message);
-
-        public void Fatal(string message, Exception ex) =>
-            Write(LogLevel.Fatal, message, ex);
 
         // ── 内部分发 ─────────────────────────────────────────
 
