@@ -1,75 +1,106 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace GameEngine
 {
     /// <summary>
-    /// 文件日志处理器，将日志异步写入本地文件
-    /// 默认文件路径：Application.persistentDataPath/Logs/game_yyyyMMdd.log
-    /// 可在构造时传入自定义路径
+    /// 文件日志处理器
+    /// 使用后台线程 + BlockingCollection 实现非阻塞异步写入，业务线程不会因 IO 阻塞。
+    /// 默认路径：Application.persistentDataPath/Logs/game_yyyyMMdd.log
     /// </summary>
-    public class FileLogHandler : ILogHandler
+    public sealed class FileLogHandler : ILogHandler
     {
         public LogLevel MinLevel { get; set; } = LogLevel.Debug;
 
+        private readonly BlockingCollection<string> _queue =
+            new BlockingCollection<string>(boundedCapacity: 4096);
+        private readonly Thread _writeThread;
         private readonly StreamWriter _writer;
-        private readonly object _lock = new object();
+        private bool _disposed;
 
-        /// <param name="filePath">日志文件完整路径，为 null 时使用默认路径</param>
+        /// <param name="filePath">日志文件完整路径，null 则使用默认路径</param>
         public FileLogHandler(string filePath = null)
         {
-            if (string.IsNullOrEmpty(filePath))
-            {
-                string dir = Path.Combine(
-                    UnityEngine.Application.persistentDataPath, "Logs");
-                Directory.CreateDirectory(dir);
-                filePath = Path.Combine(dir,
-                    $"game_{DateTime.Now:yyyyMMdd}.log");
-            }
-            else
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-            }
+            filePath = ResolveFilePath(filePath);
 
             _writer = new StreamWriter(filePath, append: true, encoding: Encoding.UTF8)
             {
-                AutoFlush = true
+                AutoFlush = false   // 由后台线程定时 Flush，避免每条都 IO
             };
+
+            _writeThread = new Thread(ConsumeLoop)
+            {
+                Name = "FileLogHandler",
+                IsBackground = true   // 随主进程退出，不阻止关闭
+            };
+            _writeThread.Start();
         }
 
         public void Write(LogLevel level, string tag, string message, Exception exception = null)
         {
-            if (level < MinLevel) return;
+            if (level < MinLevel || _disposed) return;
 
-            string line = FormatLine(level, tag, message, exception);
-            lock (_lock)
-            {
-                _writer.WriteLine(line);
-            }
+            string line = LogFormatter.FormatWithTimestamp(level, tag, message, exception);
+
+            // TryAdd 失败（队列满）时静默丢弃，避免业务阻塞
+            _queue.TryAdd(line);
         }
 
-        private static string FormatLine(LogLevel level, string tag, string message, Exception exception)
+        /// <summary>后台消费线程：逐行写入并定期 Flush</summary>
+        private void ConsumeLoop()
         {
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            string header = string.IsNullOrEmpty(tag)
-                ? $"[{timestamp}][{level}]"
-                : $"[{timestamp}][{level}][{tag}]";
+            try
+            {
+                foreach (string line in _queue.GetConsumingEnumerable())
+                {
+                    _writer.WriteLine(line);
 
-            if (exception != null)
-                return $"{header} {message}\n{exception}";
-
-            return $"{header} {message}";
+                    // 队列空时 Flush，减少 IO 次数
+                    if (_queue.Count == 0)
+                        _writer.Flush();
+                }
+            }
+            catch (ObjectDisposedException) { }
+            finally
+            {
+                // 确保退出前 Flush
+                try { _writer.Flush(); } catch { }
+            }
         }
 
         public void Dispose()
         {
-            lock (_lock)
+            if (_disposed) return;
+            _disposed = true;
+
+            _queue.CompleteAdding();         // 通知后台线程不再有新消息
+            _writeThread.Join(millisecondsTimeout: 3000); // 最多等 3 秒让后台线程写完
+
+            _writer.Flush();
+            _writer.Close();
+            _writer.Dispose();
+            _queue.Dispose();
+        }
+
+        // ── 私有辅助 ─────────────────────────────────────────
+
+        private static string ResolveFilePath(string filePath)
+        {
+            if (!string.IsNullOrEmpty(filePath))
             {
-                _writer?.Flush();
-                _writer?.Close();
-                _writer?.Dispose();
+                string dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                return filePath;
             }
+
+            string logsDir = Path.Combine(
+                UnityEngine.Application.persistentDataPath, "Logs");
+            Directory.CreateDirectory(logsDir);
+            return Path.Combine(logsDir, $"game_{DateTime.Now:yyyyMMdd}.log");
         }
     }
 }

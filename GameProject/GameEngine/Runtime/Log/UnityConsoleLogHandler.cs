@@ -4,9 +4,12 @@ using UnityEngine;
 namespace GameEngine
 {
     /// <summary>
-    /// Unity 控制台日志处理器，将日志输出到 Unity Editor Console 及运行时日志
+    /// Unity 控制台日志处理器
+    /// Debug   → UnityEngine.Debug.Log
+    /// Warning → UnityEngine.Debug.LogWarning
+    /// Error   → UnityEngine.Debug.LogError
     /// </summary>
-    public class UnityConsoleLogHandler : ILogHandler
+    public sealed class UnityConsoleLogHandler : ILogHandler
     {
         public LogLevel MinLevel { get; set; } = LogLevel.Debug;
 
@@ -14,32 +17,20 @@ namespace GameEngine
         {
             if (level < MinLevel) return;
 
-            string formatted = FormatMessage(level, tag, message, exception);
+            string text = LogFormatter.FormatWithoutTimestamp(level, tag, message, exception);
 
             switch (level)
             {
                 case LogLevel.Debug:
-                    Debug.Log(formatted);
+                    Debug.Log(text);
                     break;
                 case LogLevel.Warning:
-                    Debug.LogWarning(formatted);
+                    Debug.LogWarning(text);
                     break;
                 case LogLevel.Error:
-                    Debug.LogError(formatted);
+                    Debug.LogError(text);
                     break;
             }
-        }
-
-        private static string FormatMessage(LogLevel level, string tag, string message, Exception exception)
-        {
-            string header = string.IsNullOrEmpty(tag)
-                ? $"[{level}]"
-                : $"[{level}][{tag}]";
-
-            if (exception != null)
-                return $"{header} {message}\n{exception}";
-
-            return $"{header} {message}";
         }
 
         public void Dispose() { }
