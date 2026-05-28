@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="GameEngine/GameEngine.csproj" />
+  <Project Path="GameEngineEditor/GameEngineEditor.csproj" />
+  <Project Path="GameLogic/GameLogic.csproj" />
+  <Project Path="GameNative/GameNative.csproj" />
+  <Project Path="GameProto/GameProto.csproj" />
+</Solution>
