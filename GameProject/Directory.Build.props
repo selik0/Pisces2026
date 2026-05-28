@@ -3,5 +3,16 @@
     <OutputPath>..\..\GameClient\Assets\LogicDll\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- 禁止将 NuGet 包的 dll 复制到输出目录 -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+
+  <!-- 构建时将所有 Reference 和 ProjectReference 标记为不复制到输出目录 -->
+  <Target Name="DisableCopyLocal" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ReferencePath>
+        <CopyLocal>false</CopyLocal>
+      </ReferencePath>
+    </ItemGroup>
+  </Target>
 </Project>

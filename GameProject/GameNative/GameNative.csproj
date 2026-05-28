@@ -3,4 +3,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>GameNative</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="5.8.14" />
+  </ItemGroup>
 </Project>
