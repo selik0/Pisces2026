@@ -22,5 +22,8 @@
     <Reference Include="..\lib\Editor\*.dll" Condition="Exists('..\lib\Editor\')">
       <Private>false</Private>
     </Reference>
+    <Reference Include="..\lib\Editor\EPPlus.dll" Condition="Exists('..\lib\Editor\EPPlus.dll')">
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>

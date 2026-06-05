@@ -10,12 +10,6 @@ namespace GameNative.Excel
     /// </summary>
     public static class ExcelHelper
     {
-        static ExcelHelper()
-        {
-            // EPPlus 5.x 需要设置 LicenseContext（非商业用途选 NonCommercial）
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        }
-
         // ────────────────────────────────────────────────
         //  读取
         // ────────────────────────────────────────────────
