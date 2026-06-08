@@ -2,10 +2,6 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>GameEngineEditor</AssemblyName>
-    <!-- 编辑器程序集输出到 Unity 的 Editor 专属目录 -->
-    <OutputPath>..\..\GameClient\Assets\Editor\Dll\</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <!-- 引用 GameEngine 工程，不复制到输出目录 -->
@@ -18,10 +14,11 @@
     <Reference Include="..\lib\*.dll">
       <Private>false</Private>
     </Reference>
-    <!-- 引用 Unity 编辑器相关 DLL，需将 UnityEditor.dll 等放入 lib/Editor 目录，不复制到输出目录 -->
+    <!-- 引用 Unity 编辑器相关 DLL，不复制到输出目录 -->
     <Reference Include="..\lib\Editor\*.dll" Condition="Exists('..\lib\Editor\')">
       <Private>false</Private>
     </Reference>
+    <!-- 引用 EPPlus DLL，需将 EPPlus.dll 放入 lib/Editor 目录 -->
     <Reference Include="..\lib\Editor\EPPlus.dll" Condition="Exists('..\lib\Editor\EPPlus.dll')">
       <Private>true</Private>
     </Reference>

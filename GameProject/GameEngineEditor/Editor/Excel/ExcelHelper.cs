@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using OfficeOpenXml;
 
-namespace GameNative.Excel
+namespace GameEngineEditor
 {
     /// <summary>
     /// Excel 读写工具类（基于 EPPlus，支持 .xlsx 格式）

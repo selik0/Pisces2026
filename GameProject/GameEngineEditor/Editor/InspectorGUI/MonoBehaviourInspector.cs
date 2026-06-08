@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace GameEngine.Editor
+namespace GameEngineEditor
 {
     /// <summary>
     /// GameEngine MonoBehaviour 基础自定义 Inspector 示例。
