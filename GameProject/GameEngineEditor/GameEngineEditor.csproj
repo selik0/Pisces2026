@@ -2,6 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>GameEngineEditor</AssemblyName>
+    <!-- 编辑器程序集输出到 Unity 的 Editor 专属目录 -->
+    <OutputPath>..\..\GameClient\Assets\Editor\Dll\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <!-- 引用 GameEngine 工程，不复制到输出目录 -->

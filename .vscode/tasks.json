@@ -7,7 +7,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "GameProject\\GameProject.slnx",
+        "GameProject\\GameProject.sln",
         "-c",
         "Debug"
       ],
