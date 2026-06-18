@@ -112,11 +112,41 @@ namespace GameEngine.Ui
         // ======================================================================
 
         /// <summary>
-        /// 绘制组件列表，每项显示序号、Name 编辑框、Obj 拖拽字段和删除按钮。
+        /// 绘制组件列表，每项显示序号、Name 编辑框、Obj 下拉框（列出该组件所在节点的所有组件）和删除按钮。
+        /// 当修改 Obj 后，属性名会根据绑定规则自动更新。若存在同名属性名则输入框标红。
         /// </summary>
         private void DrawComponentList()
         {
             int deleteIndex = -1;
+
+            // ── 预扫描：检测重复的属性名 ──
+            var nameCounts = new Dictionary<string, int>();
+            for (int i = 0; i < _componentListProp.arraySize; i++)
+            {
+                SerializedProperty element = _componentListProp.GetArrayElementAtIndex(i);
+                string name = element.FindPropertyRelative("Name").stringValue;
+                if (!string.IsNullOrEmpty(name))
+                {
+                    if (nameCounts.ContainsKey(name))
+                        nameCounts[name]++;
+                    else
+                        nameCounts[name] = 1;
+                }
+            }
+
+            // ── 构建类型到规则的映射表 ──
+            var allRules = GetAllBindRulesFromAssetDatabase();
+            var typeToRule = new Dictionary<string, BindRule>();
+            foreach (var rule in allRules)
+            {
+                Type type = UIComponentCollector.ResolveType(rule.ClassName);
+                if (type != null && !typeToRule.ContainsKey(type.FullName))
+                {
+                    typeToRule[type.FullName] = rule;
+                }
+            }
+
+            UIComponentCollector collector = (UIComponentCollector)target;
 
             for (int i = 0; i < _componentListProp.arraySize; i++)
             {
@@ -130,15 +160,35 @@ namespace GameEngine.Ui
                 // 序号
                 EditorGUILayout.LabelField($"[{i}]", GUILayout.Width(30));
 
-                // 属性名
+                // ── 属性名（同名则标红） ──
                 EditorGUILayout.LabelField("Name", GUILayout.Width(40));
+
+                string currentName = nameProp.stringValue;
+                bool isDuplicate = !string.IsNullOrEmpty(currentName)
+                    && nameCounts.TryGetValue(currentName, out int cnt) && cnt > 1;
+
+                Color oldBgColor = GUI.backgroundColor;
+                if (isDuplicate)
+                {
+                    GUI.backgroundColor = new Color(1f, 0.35f, 0.35f, 1f);
+                }
                 EditorGUILayout.PropertyField(nameProp, GUIContent.none, GUILayout.MinWidth(100));
+                GUI.backgroundColor = oldBgColor;
 
-                // 组件对象
+                // ── 组件对象：下拉框选择该组件所在节点的所有组件 ──
                 EditorGUILayout.LabelField("Obj", GUILayout.Width(25));
-                EditorGUILayout.PropertyField(objProp, GUIContent.none, GUILayout.MinWidth(150));
 
-                // 删除按钮
+                Component prevObj = objProp.objectReferenceValue as Component;
+                DrawComponentDropdown(objProp, prevObj);
+
+                // 检测组件是否发生变化，若变化则自动更新属性名
+                Component newObj = objProp.objectReferenceValue as Component;
+                if (newObj != prevObj && newObj != null)
+                {
+                    AutoUpdatePropertyName(nameProp, newObj, typeToRule, collector);
+                }
+
+                // ── 删除按钮 ──
                 GUI.backgroundColor = Color.red;
                 if (GUILayout.Button("X", GUILayout.Width(25), GUILayout.Height(16)))
                 {
@@ -167,11 +217,85 @@ namespace GameEngine.Ui
         }
 
         // ======================================================================
+        //  组件下拉框
+        // ======================================================================
+
+        /// <summary>
+        /// 绘制组件下拉框。若当前 Obj 为空则回退到标准 ObjectField；
+        /// 否则列出该组件所在 GameObject 上的所有组件供选择。
+        /// </summary>
+        private void DrawComponentDropdown(SerializedProperty objProp, Component currentObj)
+        {
+            if (currentObj == null)
+            {
+                // 没有现有组件引用时使用标准拖拽字段
+                EditorGUILayout.PropertyField(objProp, GUIContent.none, GUILayout.MinWidth(150));
+                return;
+            }
+
+            GameObject go = currentObj.gameObject;
+            Component[] allComponents = go.GetComponents<Component>();
+
+            // 构建下拉选项（首项为 None）
+            string[] displayNames = new string[allComponents.Length + 1];
+            displayNames[0] = "None";
+            int selectedIndex = 0;
+
+            for (int j = 0; j < allComponents.Length; j++)
+            {
+                displayNames[j + 1] = allComponents[j].GetType().Name;
+                if (allComponents[j] == currentObj)
+                    selectedIndex = j + 1;
+            }
+
+            int newIndex = EditorGUILayout.Popup(selectedIndex, displayNames, GUILayout.MinWidth(150));
+            if (newIndex != selectedIndex)
+            {
+                objProp.objectReferenceValue = (newIndex == 0) ? null : (UnityEngine.Object)allComponents[newIndex - 1];
+            }
+        }
+
+        // ======================================================================
+        //  属性名自动更新
+        // ======================================================================
+
+        /// <summary>
+        /// 根据新选中的组件，查找匹配的 BindRule 并结合节点名称自动更新属性名。
+        /// 若无法匹配到规则则保持原有名称不变。
+        /// </summary>
+        private void AutoUpdatePropertyName(SerializedProperty nameProp, Component obj,
+            Dictionary<string, BindRule> typeToRule, UIComponentCollector collector)
+        {
+            if (obj == null) return;
+
+            string typeFullName = obj.GetType().FullName;
+            if (!typeToRule.TryGetValue(typeFullName, out BindRule rule)) return;
+
+            string nodeName = obj.gameObject.name;
+            var bindings = collector.ParseNodeName(nodeName);
+
+            string propertyName;
+            if (bindings != null && bindings.Count > 0)
+            {
+                // 从节点名解析结果中取第一个绑定的节点名部分
+                propertyName = UIComponentCollector.GeneratePropertyName(rule.Prefix, bindings[0].NodeName);
+            }
+            else
+            {
+                // 节点名无下划线格式时直接使用完整节点名
+                propertyName = UIComponentCollector.GeneratePropertyName(rule.Prefix, nodeName);
+            }
+
+            nameProp.stringValue = propertyName;
+        }
+
+        // ======================================================================
         //  代码生成
         // ======================================================================
 
         /// <summary>
         /// 根据组件列表和配置模板生成绑定代码文件。
+        /// 生成前检查同名属性和组件引用丢失，有问题时弹窗确认。
         /// </summary>
         private void GenerateCode(UIComponentCollector collector)
         {
@@ -181,7 +305,73 @@ namespace GameEngine.Ui
                 return;
             }
 
-            // 构建属性代码块
+            // ── 生成前检查 ──
+            List<string> warnings = new List<string>();
+
+            // 1. 检查同名属性
+            var nameCounts = new Dictionary<string, int>();
+            foreach (var info in collector.ComponentList)
+            {
+                if (info == null || string.IsNullOrEmpty(info.Name)) continue;
+                if (nameCounts.ContainsKey(info.Name))
+                    nameCounts[info.Name]++;
+                else
+                    nameCounts[info.Name] = 1;
+            }
+
+            var duplicates = new List<string>();
+            foreach (var kvp in nameCounts)
+            {
+                if (kvp.Value > 1)
+                    duplicates.Add($"  · {kvp.Key}（出现 {kvp.Value} 次）");
+            }
+            if (duplicates.Count > 0)
+            {
+                warnings.Add($"存在同名属性（{duplicates.Count} 个）：\n{string.Join("\n", duplicates)}");
+            }
+
+            // 2. 检查组件引用丢失
+            int nullObjCount = 0;
+            int nullInfoCount = 0;
+            for (int i = 0; i < collector.ComponentList.Count; i++)
+            {
+                var info = collector.ComponentList[i];
+                if (info == null)
+                {
+                    nullInfoCount++;
+                }
+                else if (info.Obj == null)
+                {
+                    nullObjCount++;
+                }
+            }
+            if (nullInfoCount > 0 || nullObjCount > 0)
+            {
+                string msg = "存在组件引用丢失：";
+                if (nullObjCount > 0)
+                    msg += $"\n  · {nullObjCount} 个条目对组件引用为 null（Obj 为空）";
+                if (nullInfoCount > 0)
+                    msg += $"\n  · {nullInfoCount} 个条目为 null（缺失条目）";
+                msg += "\n\n丢失引用的条目将被跳过，不会生成对应属性。";
+                warnings.Add(msg);
+            }
+
+            // 有警告则弹窗确认
+            if (warnings.Count > 0)
+            {
+                string title = "生成代码 - 警告";
+                string allWarnings = string.Join("\n\n", warnings);
+                allWarnings += "\n\n是否继续生成代码？";
+
+                if (!EditorUtility.DisplayDialog(title, allWarnings, "继续生成", "取消"))
+                {
+                    Debug.Log("[UIComponentCollectorInspector] 用户取消了代码生成。");
+                    return;
+                }
+                Debug.LogWarning($"[UIComponentCollectorInspector] 代码生成时有以下警告：\n{string.Join("\n\n", warnings)}");
+            }
+
+            // ── 构建属性代码块 ──
             StringBuilder propertiesBuilder = new StringBuilder();
             Dictionary<string, string> eventMethods = new Dictionary<string, string>();
 
