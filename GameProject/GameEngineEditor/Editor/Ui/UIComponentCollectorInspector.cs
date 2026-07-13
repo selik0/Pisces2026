@@ -71,7 +71,7 @@ namespace GameEngine.Ui
             if (GUILayout.Button("收集组件", GUILayout.Height(30)))
             {
                 var allRules = GetAllBindRulesFromAssetDatabase();
-                collector.CollectComponents(allRules);
+                UIComponentCollectorHelper.CollectComponents(collector, allRules);
                 EditorUtility.SetDirty(collector);
             }
 
@@ -139,7 +139,7 @@ namespace GameEngine.Ui
             var typeToRule = new Dictionary<string, BindRule>();
             foreach (var rule in allRules)
             {
-                Type type = UIComponentCollector.ResolveType(rule.ClassName);
+                Type type = UIComponentCollectorHelper.ResolveType(rule.ClassName);
                 if (type != null && !typeToRule.ContainsKey(type.FullName))
                 {
                     typeToRule[type.FullName] = rule;
@@ -272,18 +272,18 @@ namespace GameEngine.Ui
             if (!typeToRule.TryGetValue(typeFullName, out BindRule rule)) return;
 
             string nodeName = obj.gameObject.name;
-            var bindings = collector.ParseNodeName(nodeName);
+            var bindings = UIComponentCollectorHelper.ParseNodeName(nodeName);
 
             string propertyName;
             if (bindings != null && bindings.Count > 0)
             {
                 // 从节点名解析结果中取第一个绑定的节点名部分
-                propertyName = UIComponentCollector.GeneratePropertyName(rule.Prefix, bindings[0].NodeName);
+                propertyName = UIComponentCollectorHelper.GeneratePropertyName(rule.Prefix, bindings[0].NodeName);
             }
             else
             {
                 // 节点名无下划线格式时直接使用完整节点名
-                propertyName = UIComponentCollector.GeneratePropertyName(rule.Prefix, nodeName);
+                propertyName = UIComponentCollectorHelper.GeneratePropertyName(rule.Prefix, nodeName);
             }
 
             nameProp.stringValue = propertyName;
@@ -507,12 +507,12 @@ namespace GameEngine.Ui
                 if (t == collector.transform) continue;
 
                 string nodeName = t.name;
-                var bindings = collector.ParseNodeName(nodeName);
+                var bindings = UIComponentCollectorHelper.ParseNodeName(nodeName);
                 if (bindings == null) continue;
 
                 foreach (var binding in bindings)
                 {
-                    string expectedPropName = UIComponentCollector.GeneratePropertyName(binding.Prefix, binding.NodeName);
+                    string expectedPropName = UIComponentCollectorHelper.GeneratePropertyName(binding.Prefix, binding.NodeName);
                     if (expectedPropName == info.Name)
                     {
                         // 在所有规则中查找匹配的 Prefix
