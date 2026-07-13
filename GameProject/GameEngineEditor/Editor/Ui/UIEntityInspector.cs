@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -9,11 +9,11 @@ using UnityEngine;
 namespace GameEngineEditor
 {
     /// <summary>
-    /// UIComponentCollector 的自定义 Inspector。
+    /// UIEntity 的自定义 Inspector。
     /// 展示完整的组件列表（可编辑 Name 和 Obj），提供"收集组件"和"生成代码"按钮。
     /// </summary>
-    [CustomEditor(typeof(UIComponentCollector))]
-    public class UIComponentCollectorInspector : UnityEditor.Editor
+    [CustomEditor(typeof(UIEntity))]
+    public class UIEntityInspector : UnityEditor.Editor
     {
         // ======================================================================
         //  SerializedProperties
@@ -31,7 +31,7 @@ using UnityEngine.UI;
 
 namespace GameEngine.Ui
 {{
-    public partial class {ClassName} : UIComponentCollector
+    public partial class {ClassName} : UIEntity
     {{
 {Properties}
     }}
@@ -47,15 +47,15 @@ namespace GameEngine.Ui
 
         private void OnEnable()
         {
-            _componentListProp = serializedObject.FindProperty(nameof(UIComponentCollector.ComponentList));
-            _generatedClassPathProp = serializedObject.FindProperty(nameof(UIComponentCollector.GeneratedClassPath));
+            _componentListProp = serializedObject.FindProperty(nameof(UIEntity.ComponentList));
+            _generatedClassPathProp = serializedObject.FindProperty(nameof(UIEntity.GeneratedClassPath));
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            UIComponentCollector collector = (UIComponentCollector)target;
+            UIEntity collector = (UIEntity)target;
 
             // ── 标题 ──
             EditorUIHelper.DrawSectionHeader("UI 组件收集器");
@@ -71,7 +71,7 @@ namespace GameEngine.Ui
             if (GUILayout.Button("收集组件", GUILayout.Height(30)))
             {
                 var allRules = GetAllBindRulesFromAssetDatabase();
-                UIComponentCollectorHelper.CollectComponents(collector, allRules);
+                UIEntityHelper.CollectComponents(collector, allRules);
                 EditorUtility.SetDirty(collector);
             }
 
@@ -139,14 +139,14 @@ namespace GameEngine.Ui
             var typeToRule = new Dictionary<string, BindRule>();
             foreach (var rule in allRules)
             {
-                Type type = UIComponentCollectorHelper.ResolveType(rule.ClassName);
+                Type type = UIEntityHelper.ResolveType(rule.ClassName);
                 if (type != null && !typeToRule.ContainsKey(type.FullName))
                 {
                     typeToRule[type.FullName] = rule;
                 }
             }
 
-            UIComponentCollector collector = (UIComponentCollector)target;
+            UIEntity collector = (UIEntity)target;
 
             for (int i = 0; i < _componentListProp.arraySize; i++)
             {
@@ -264,7 +264,7 @@ namespace GameEngine.Ui
         /// 若无法匹配到规则则保持原有名称不变。
         /// </summary>
         private void AutoUpdatePropertyName(SerializedProperty nameProp, Component obj,
-            Dictionary<string, BindRule> typeToRule, UIComponentCollector collector)
+            Dictionary<string, BindRule> typeToRule, UIEntity collector)
         {
             if (obj == null) return;
 
@@ -272,18 +272,18 @@ namespace GameEngine.Ui
             if (!typeToRule.TryGetValue(typeFullName, out BindRule rule)) return;
 
             string nodeName = obj.gameObject.name;
-            var bindings = UIComponentCollectorHelper.ParseNodeName(nodeName);
+            var bindings = UIEntityHelper.ParseNodeName(nodeName);
 
             string propertyName;
             if (bindings != null && bindings.Count > 0)
             {
                 // 从节点名解析结果中取第一个绑定的节点名部分
-                propertyName = UIComponentCollectorHelper.GeneratePropertyName(rule.Prefix, bindings[0].NodeName);
+                propertyName = UIEntityHelper.GeneratePropertyName(rule.Prefix, bindings[0].NodeName);
             }
             else
             {
                 // 节点名无下划线格式时直接使用完整节点名
-                propertyName = UIComponentCollectorHelper.GeneratePropertyName(rule.Prefix, nodeName);
+                propertyName = UIEntityHelper.GeneratePropertyName(rule.Prefix, nodeName);
             }
 
             nameProp.stringValue = propertyName;
@@ -297,7 +297,7 @@ namespace GameEngine.Ui
         /// 根据组件列表和配置模板生成绑定代码文件。
         /// 生成前检查同名属性和组件引用丢失，有问题时弹窗确认。
         /// </summary>
-        private void GenerateCode(UIComponentCollector collector)
+        private void GenerateCode(UIEntity collector)
         {
             if (collector.ComponentList == null || collector.ComponentList.Count == 0)
             {
@@ -365,10 +365,10 @@ namespace GameEngine.Ui
 
                 if (!EditorUtility.DisplayDialog(title, allWarnings, "继续生成", "取消"))
                 {
-                    Debug.Log("[UIComponentCollectorInspector] 用户取消了代码生成。");
+                    Debug.Log("[UIEntityInspector] 用户取消了代码生成。");
                     return;
                 }
-                Debug.LogWarning($"[UIComponentCollectorInspector] 代码生成时有以下警告：\n{string.Join("\n\n", warnings)}");
+                Debug.LogWarning($"[UIEntityInspector] 代码生成时有以下警告：\n{string.Join("\n\n", warnings)}");
             }
 
             // ── 构建属性代码块 ──
@@ -452,7 +452,7 @@ namespace GameEngine.Ui
 
             AssetDatabase.Refresh();
             EditorUtility.DisplayDialog("生成完成", message, "确定");
-            Debug.Log($"[UIComponentCollectorInspector] 代码已生成: {filePath}");
+            Debug.Log($"[UIEntityInspector] 代码已生成: {filePath}");
         }
 
         /// <summary>
@@ -495,7 +495,7 @@ namespace GameEngine.Ui
         /// <summary>
         /// 根据 ComponentInfo 的属性名反查绑定的规则。
         /// </summary>
-        private BindRule FindRuleForProperty(UIComponentCollector collector, ComponentInfo info)
+        private BindRule FindRuleForProperty(UIEntity collector, ComponentInfo info)
         {
             var allRules = GetAllBindRulesFromAssetDatabase();
             if (allRules.Count == 0) return null;
@@ -507,12 +507,12 @@ namespace GameEngine.Ui
                 if (t == collector.transform) continue;
 
                 string nodeName = t.name;
-                var bindings = UIComponentCollectorHelper.ParseNodeName(nodeName);
+                var bindings = UIEntityHelper.ParseNodeName(nodeName);
                 if (bindings == null) continue;
 
                 foreach (var binding in bindings)
                 {
-                    string expectedPropName = UIComponentCollectorHelper.GeneratePropertyName(binding.Prefix, binding.NodeName);
+                    string expectedPropName = UIEntityHelper.GeneratePropertyName(binding.Prefix, binding.NodeName);
                     if (expectedPropName == info.Name)
                     {
                         // 在所有规则中查找匹配的 Prefix
@@ -552,17 +552,17 @@ namespace GameEngine.Ui
         /// <summary>
         /// 清理无效的组件引用（Obj 为 null 的条目）。
         /// </summary>
-        private void CleanInvalidReferences(UIComponentCollector collector)
+        private void CleanInvalidReferences(UIEntity collector)
         {
             int removed = collector.ComponentList.RemoveAll(item => item == null || item.Obj == null);
             if (removed > 0)
             {
                 EditorUtility.SetDirty(collector);
-                Debug.Log($"[UIComponentCollectorInspector] 已清理 {removed} 条无效引用。");
+                Debug.Log($"[UIEntityInspector] 已清理 {removed} 条无效引用。");
             }
             else
             {
-                Debug.Log("[UIComponentCollectorInspector] 没有无效引用需要清理。");
+                Debug.Log("[UIEntityInspector] 没有无效引用需要清理。");
             }
         }
     }

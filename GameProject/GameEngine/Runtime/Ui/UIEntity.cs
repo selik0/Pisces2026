@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace GameEngine
@@ -22,7 +22,7 @@ namespace GameEngine
     /// UI 组件收集器数据。
     /// 挂载到 UI 根节点上，保存编辑器收集到的组件引用与生成路径。
     /// </summary>
-    public class UIComponentCollector : MonoBehaviour
+    public class UIEntity : MonoBehaviour
     {
         /// <summary>组件收集列表</summary>
         public List<ComponentInfo> ComponentList = new List<ComponentInfo>();

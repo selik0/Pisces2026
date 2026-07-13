@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -19,20 +19,20 @@ namespace GameEngineEditor
     }
 
     /// <summary>
-    /// UIComponentCollector 的编辑器辅助类，负责组件收集逻辑。
+    /// UIEntity 的编辑器辅助类，负责组件收集逻辑。
     /// </summary>
-    public static class UIComponentCollectorHelper
+    public static class UIEntityHelper
     {
         /// <summary>
         /// 根据给定的绑定规则列表，自动收集目标对象所有子节点的组件。
         /// </summary>
-        /// <param name="collector">目标 UIComponentCollector 实例</param>
+        /// <param name="collector">目标 UIEntity 实例</param>
         /// <param name="rules">绑定规则列表</param>
-        public static void CollectComponents(UIComponentCollector collector, List<BindRule> rules)
+        public static void CollectComponents(UIEntity collector, List<BindRule> rules)
         {
             if (rules == null || rules.Count == 0)
             {
-                Debug.LogWarning("[UIComponentCollector] 绑定规则列表为空。");
+                Debug.LogWarning("[UIEntity] 绑定规则列表为空。");
                 return;
             }
 
@@ -96,27 +96,27 @@ namespace GameEngineEditor
                 }
             }
 
-            Debug.Log($"[UIComponentCollector] 收集完成，共 {collector.ComponentList.Count} 个组件。");
+            Debug.Log($"[UIEntity] 收集完成，共 {collector.ComponentList.Count} 个组件。");
         }
 
         /// <summary>
         /// 从 Transform 上获取单个命名规则对应的组件并添加。
         /// </summary>
-        private static void CollectFromTransform(UIComponentCollector collector, Transform t, BindRule rule, string propertyName,
+        private static void CollectFromTransform(UIEntity collector, Transform t, BindRule rule, string propertyName,
             Dictionary<string, Type> typeCache, HashSet<string> addedNames)
         {
             if (!addedNames.Add(propertyName)) return;
 
             if (!typeCache.TryGetValue(rule.ClassName, out var type))
             {
-                Debug.LogWarning($"[UIComponentCollector] 无法解析类型 '{rule.ClassName}'，节点: {t.name}");
+                Debug.LogWarning($"[UIEntity] 无法解析类型 '{rule.ClassName}'，节点: {t.name}");
                 return;
             }
 
             Component comp = t.GetComponent(type);
             if (comp == null)
             {
-                Debug.LogWarning($"[UIComponentCollector] 节点 '{t.name}' 上未找到类型 '{rule.ClassName}' 的组件");
+                Debug.LogWarning($"[UIEntity] 节点 '{t.name}' 上未找到类型 '{rule.ClassName}' 的组件");
                 return;
             }
 
@@ -127,7 +127,7 @@ namespace GameEngineEditor
         /// 从 Transform 上获取所有 Auto 规则指定类型的组件并添加。
         /// 支持同一节点存在多个同类型组件（自动追加数字后缀）。
         /// </summary>
-        private static void CollectAllFromTransform(UIComponentCollector collector, Transform t, BindRule rule, string basePropertyName,
+        private static void CollectAllFromTransform(UIEntity collector, Transform t, BindRule rule, string basePropertyName,
             Dictionary<string, Type> typeCache, HashSet<string> addedNames)
         {
             if (!typeCache.TryGetValue(rule.ClassName, out var type)) return;
