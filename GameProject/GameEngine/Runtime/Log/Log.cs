@@ -50,11 +50,17 @@ namespace GameEngine
             bool enableConsole    = true,
             bool enableFile       = true)
         {
-            if (_default != null) return;   // 快速路径（无锁）
+            if (_default != null)
+            {
+                return;   // 快速路径（无锁）
+            }
 
             lock (_initLock)
             {
-                if (_default != null) return; // 双重检查
+                if (_default != null)
+                {
+                    return; // 双重检查
+                }
 
                 var logger = new Logger { MinLevel = minLevel };
 
@@ -85,8 +91,16 @@ namespace GameEngine
             EnsureInitialized();
             var logger = new Logger(tag) { MinLevel = _default.MinLevel };
             // 直接添加共享 Handler；子 Logger.Dispose 只清空自身列表，不会 Dispose Handler
-            if (_consoleHandler != null) logger.AddHandler(_consoleHandler);
-            if (_fileHandler    != null) logger.AddHandler(_fileHandler);
+            if (_consoleHandler != null)
+            {
+                logger.AddHandler(_consoleHandler);
+            }
+
+            if (_fileHandler    != null)
+            {
+                logger.AddHandler(_fileHandler);
+            }
+
             return logger;
         }
 
@@ -95,7 +109,10 @@ namespace GameEngine
         {
             lock (_initLock)
             {
-                if (_default == null) return;
+                if (_default == null)
+                {
+                    return;
+                }
 
                 _default.Dispose();   // 清空 handler 列表（不 Dispose handler 本身）
                 _default = null;
@@ -128,7 +145,9 @@ namespace GameEngine
         private static void EnsureInitialized()
         {
             if (_default == null)
+            {
                 Initialize();
+            }
         }
     }
 }

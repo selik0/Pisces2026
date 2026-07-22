@@ -49,7 +49,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new SceneManager();
+                if (_default == null)
+                {
+                    _default = new SceneManager();
+                }
+
                 return _default;
             }
         }

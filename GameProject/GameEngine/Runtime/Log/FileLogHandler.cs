@@ -41,7 +41,10 @@ namespace GameEngine
 
         public void Write(LogLevel level, string tag, string message, Exception exception = null)
         {
-            if (level < MinLevel || _disposed) return;
+            if (level < MinLevel || _disposed)
+            {
+                return;
+            }
 
             string line = LogFormatter.FormatWithTimestamp(level, tag, message, exception);
 
@@ -60,7 +63,9 @@ namespace GameEngine
 
                     // 队列空时 Flush，减少 IO 次数
                     if (_queue.Count == 0)
+                    {
                         _writer.Flush();
+                    }
                 }
             }
             catch (ObjectDisposedException) { }
@@ -73,7 +78,11 @@ namespace GameEngine
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+            {
+                return;
+            }
+
             _disposed = true;
 
             _queue.CompleteAdding();         // 通知后台线程不再有新消息
@@ -93,7 +102,10 @@ namespace GameEngine
             {
                 string dir = Path.GetDirectoryName(filePath);
                 if (!string.IsNullOrEmpty(dir))
+                {
                     Directory.CreateDirectory(dir);
+                }
+
                 return filePath;
             }
 

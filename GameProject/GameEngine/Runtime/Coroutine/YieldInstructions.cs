@@ -24,7 +24,10 @@ namespace GameEngine
 
         public void Tick(float deltaTime)
         {
-            if (_remaining > 0f) _remaining -= deltaTime;
+            if (_remaining > 0f)
+            {
+                _remaining -= deltaTime;
+            }
         }
     }
 
@@ -50,7 +53,10 @@ namespace GameEngine
 
         public void Tick(float deltaTime)
         {
-            if (_remaining > 0) _remaining--;
+            if (_remaining > 0)
+            {
+                _remaining--;
+            }
         }
     }
 

@@ -110,7 +110,10 @@ namespace GameEngine
                 return;
             }
 
-            if (State != UIBrickState.Created) return;
+            if (State != UIBrickState.Created)
+            {
+                return;
+            }
 
             State = UIBrickState.Opening;
             IsOpened = true;
@@ -154,7 +157,10 @@ namespace GameEngine
         /// <summary>显示已打开的 UI。</summary>
         public void Show()
         {
-            if (State != UIBrickState.Opened || _destroyRequested) return;
+            if (State != UIBrickState.Opened || _destroyRequested)
+            {
+                return;
+            }
 
             State = UIBrickState.Showing;
             IsVisible = true;
@@ -180,7 +186,10 @@ namespace GameEngine
         /// <summary>隐藏 UI，但保留本次打开的数据和事件订阅。</summary>
         public void Hide()
         {
-            if (State != UIBrickState.Visible) return;
+            if (State != UIBrickState.Visible)
+            {
+                return;
+            }
 
             Exception exception = null;
             State = UIBrickState.Hiding;
@@ -196,7 +205,10 @@ namespace GameEngine
         /// <summary>UI 被同层级中的其他界面覆盖时暂停。</summary>
         public void Pause()
         {
-            if (State != UIBrickState.Visible || IsPaused || _destroyRequested) return;
+            if (State != UIBrickState.Visible || IsPaused || _destroyRequested)
+            {
+                return;
+            }
 
             IsPaused = true;
             try
@@ -216,7 +228,10 @@ namespace GameEngine
         /// <summary>UI 不再被覆盖时恢复。</summary>
         public void Resume()
         {
-            if (State != UIBrickState.Visible || !IsPaused || _destroyRequested) return;
+            if (State != UIBrickState.Visible || !IsPaused || _destroyRequested)
+            {
+                return;
+            }
 
             IsPaused = false;
             try
@@ -240,7 +255,10 @@ namespace GameEngine
         /// <summary>关闭 UI。可见时先 Hide，随后执行 OnClose 并注销事件。</summary>
         public void Close()
         {
-            if (State != UIBrickState.Opened && State != UIBrickState.Visible) return;
+            if (State != UIBrickState.Opened && State != UIBrickState.Visible)
+            {
+                return;
+            }
 
             Exception exception = null;
             CloseCore(UIBrickState.Created, ref exception);
@@ -254,7 +272,10 @@ namespace GameEngine
         /// </summary>
         public void Destroy()
         {
-            if (State == UIBrickState.Destroyed || State == UIBrickState.Destroying) return;
+            if (State == UIBrickState.Destroyed || State == UIBrickState.Destroying)
+            {
+                return;
+            }
 
             if (!IsStableState())
             {
@@ -437,7 +458,10 @@ namespace GameEngine
 
         private void ProcessDestroyRequest(ref Exception exception)
         {
-            if (!_destroyRequested || !IsStableState()) return;
+            if (!_destroyRequested || !IsStableState())
+            {
+                return;
+            }
 
             try
             {
@@ -451,7 +475,10 @@ namespace GameEngine
 
         private void UnregisterRegisteredEvents(ref Exception exception)
         {
-            if (!_eventsRegistered) return;
+            if (!_eventsRegistered)
+            {
+                return;
+            }
 
             _eventsRegistered = false;
             InvokeLifecycle(UnregisterEvents, ref exception);

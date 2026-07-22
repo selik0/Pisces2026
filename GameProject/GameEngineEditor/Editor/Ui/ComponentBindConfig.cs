@@ -45,11 +45,17 @@ namespace GameEngine
         /// <returns>完整类型名，未找到返回 null</returns>
         public string GetClassName(string prefix)
         {
-            if (Rules == null) return null;
+            if (Rules == null)
+            {
+                return null;
+            }
+
             foreach (var rule in Rules)
             {
                 if (rule != null && rule.Prefix == prefix)
+                {
                     return rule.ClassName;
+                }
             }
             return null;
         }
@@ -59,11 +65,17 @@ namespace GameEngine
         /// </summary>
         public BindRule GetRule(string prefix)
         {
-            if (Rules == null) return null;
+            if (Rules == null)
+            {
+                return null;
+            }
+
             foreach (var rule in Rules)
             {
                 if (rule != null && rule.Prefix == prefix)
+                {
                     return rule;
+                }
             }
             return null;
         }

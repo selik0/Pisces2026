@@ -52,7 +52,10 @@ namespace GameEngine
         /// <returns>协程句柄，可用于停止或等待</returns>
         public CoroutineHandle Start(IEnumerator routine)
         {
-            if (routine == null) throw new ArgumentNullException(nameof(routine));
+            if (routine == null)
+            {
+                throw new ArgumentNullException(nameof(routine));
+            }
 
             var handle = new CoroutineHandle();
             var stack  = new Stack<IEnumerator>();
@@ -65,12 +68,18 @@ namespace GameEngine
             };
 
             if (_isTicking)
+            {
                 _toAdd.Add(entry);
+            }
             else
+            {
                 _coroutines.Add(entry);
+            }
 
             if (DebugMode)
+            {
                 Log.Debug($"[Coroutine] Start  #{handle.Id}");
+            }
 
             return handle;
         }
@@ -80,23 +89,39 @@ namespace GameEngine
         /// <summary>停止指定协程。</summary>
         public void Stop(CoroutineHandle handle)
         {
-            if (handle == null || handle.IsDone) return;
+            if (handle == null || handle.IsDone)
+            {
+                return;
+            }
+
             handle.Stop();
 
             if (DebugMode)
+            {
                 Log.Debug($"[Coroutine] Stop  #{handle.Id}");
+            }
         }
 
         /// <summary>停止所有协程。</summary>
         public void StopAll()
         {
-            foreach (var e in _coroutines) e.Handle.Stop();
-            foreach (var e in _toAdd)      e.Handle.Stop();
+            foreach (var e in _coroutines)
+            {
+                e.Handle.Stop();
+            }
+
+            foreach (var e in _toAdd)
+            {
+                e.Handle.Stop();
+            }
+
             _coroutines.Clear();
             _toAdd.Clear();
 
             if (DebugMode)
+            {
                 Log.Debug("[Coroutine] StopAll");
+            }
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
@@ -126,7 +151,9 @@ namespace GameEngine
                     _coroutines.RemoveAt(i);
 
                     if (DebugMode)
+                    {
                         Log.Debug($"[Coroutine] Completed  #{entry.Handle.Id}");
+                    }
                 }
             }
 
@@ -156,7 +183,9 @@ namespace GameEngine
             {
                 entry.CurrentYield.Tick(deltaTime);
                 if (!entry.CurrentYield.IsCompleted)
+                {
                     return true; // 仍在等待
+                }
 
                 entry.CurrentYield = null; // 等待完成，继续执行
             }
@@ -227,7 +256,9 @@ namespace GameEngine
 
                 // 未知对象，直接跳过（等下一帧）
                 if (DebugMode)
+                {
                     Log.Debug($"[Coroutine] Unknown yield object '{current.GetType().Name}' in #{entry.Handle.Id}, treated as next frame");
+                }
 
                 entry.WaitNextFrame = true;
                 return true;

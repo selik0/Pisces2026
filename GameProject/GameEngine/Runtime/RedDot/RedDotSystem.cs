@@ -49,7 +49,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new RedDotTree();
+                if (_default == null)
+                {
+                    _default = new RedDotTree();
+                }
+
                 return _default;
             }
         }

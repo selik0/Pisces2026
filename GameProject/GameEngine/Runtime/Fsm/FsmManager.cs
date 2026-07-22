@@ -35,14 +35,18 @@ namespace GameEngine
         {
             var key = GetKey<T>(name);
             if (_fsms.ContainsKey(key))
+            {
                 throw new InvalidOperationException(
                     $"[FsmManager] 已存在名称为 '{name}'、持有者类型为 '{typeof(T).Name}' 的有限状态机。");
+            }
 
             var fsm = Fsm<T>.Create(name, owner, states);
             _fsms[key] = new FsmWrapper<T>(fsm);
 
             if (DebugMode)
+            {
                 Log.Debug($"[FsmManager] 创建 FSM  key={key}  states={states.Length}");
+            }
 
             return fsm;
         }
@@ -60,7 +64,11 @@ namespace GameEngine
         /// </summary>
         public void DestroyFsm<T>(IFsm<T> fsm) where T : class
         {
-            if (fsm == null) throw new ArgumentNullException(nameof(fsm));
+            if (fsm == null)
+            {
+                throw new ArgumentNullException(nameof(fsm));
+            }
+
             DestroyFsmByKey(GetKey<T>(fsm.Name));
         }
 
@@ -76,7 +84,9 @@ namespace GameEngine
             _fsms.Remove(key);
 
             if (DebugMode)
+            {
                 Log.Debug($"[FsmManager] 销毁 FSM  key={key}");
+            }
         }
 
         // ── HasFsm ───────────────────────────────────────────────────────────────
@@ -95,7 +105,10 @@ namespace GameEngine
         {
             var key = GetKey<T>(name);
             if (_fsms.TryGetValue(key, out var wrapper))
+            {
                 return ((FsmWrapper<T>)wrapper).Fsm;
+            }
+
             return null;
         }
 
@@ -107,7 +120,9 @@ namespace GameEngine
         public void Tick(float deltaTime)
         {
             foreach (var wrapper in _fsms.Values)
+            {
                 wrapper.Tick(deltaTime);
+            }
         }
 
         // ── DestroyAll ───────────────────────────────────────────────────────────
@@ -118,11 +133,16 @@ namespace GameEngine
         public void DestroyAll()
         {
             foreach (var wrapper in _fsms.Values)
+            {
                 wrapper.Destroy();
+            }
+
             _fsms.Clear();
 
             if (DebugMode)
+            {
                 Log.Debug("[FsmManager] 已销毁所有 FSM");
+            }
         }
 
         // ── 内部辅助 ─────────────────────────────────────────────────────────────

@@ -62,13 +62,18 @@ namespace GameEngine
         /// </param>
         public void Subscribe<T>(Action<T> callback, bool once = false, GameObject boundObject = null)
         {
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
 
             var list = GetOrCreateList<T>();
             list.Add(new EventBinding<T>(callback, once, boundObject));
 
             if (DebugMode)
+            {
                 Log.Debug($"[EventBus] Subscribe  <{typeof(T).Name}>  once={once}  bound={BoundName(boundObject)}  listeners={list.Count}");
+            }
         }
 
         // ── Unsubscribe ──────────────────────────────────────────────────────────
@@ -80,14 +85,23 @@ namespace GameEngine
         /// <param name="callback">要移除的回调</param>
         public void Unsubscribe<T>(Action<T> callback)
         {
-            if (callback == null) return;
-            if (!_bindings.TryGetValue(typeof(T), out var raw)) return;
+            if (callback == null)
+            {
+                return;
+            }
+
+            if (!_bindings.TryGetValue(typeof(T), out var raw))
+            {
+                return;
+            }
 
             var list = (BindingList<T>)raw;
             int removed = list.RemoveAll(b => b.Callback == callback);
 
             if (DebugMode)
+            {
                 Log.Debug($"[EventBus] Unsubscribe  <{typeof(T).Name}>  removed={removed}  listeners={list.Count}");
+            }
         }
 
         /// <summary>
@@ -98,15 +112,23 @@ namespace GameEngine
         /// <param name="boundObject">要解绑的 GameObject</param>
         public void UnsubscribeAll(GameObject boundObject)
         {
-            if (boundObject == null) return;
+            if (boundObject == null)
+            {
+                return;
+            }
+
             foreach (var raw in _bindings.Values)
             {
                 if (raw is IBindingList bl)
+                {
                     bl.RemoveByBoundObject(boundObject);
+                }
             }
 
             if (DebugMode)
+            {
                 Log.Debug($"[EventBus] UnsubscribeAll  bound={BoundName(boundObject)}");
+            }
         }
 
         /// <summary>清除指定事件类型下的所有订阅。</summary>
@@ -120,7 +142,9 @@ namespace GameEngine
                 list.Clear();
 
                 if (DebugMode)
+                {
                     Log.Debug($"[EventBus] Clear  <{typeof(T).Name}>  removed={count}");
+                }
             }
         }
 
@@ -129,11 +153,19 @@ namespace GameEngine
         {
             int total = 0;
             foreach (var raw in _bindings.Values)
-                if (raw is IBindingList bl) total += bl.Count;
+            {
+                if (raw is IBindingList bl)
+                {
+                    total += bl.Count;
+                }
+            }
+
             _bindings.Clear();
 
             if (DebugMode)
+            {
                 Log.Debug($"[EventBus] ClearAll  removed={total}");
+            }
         }
 
         // ── Emit ─────────────────────────────────────────────────────────────────
@@ -150,12 +182,17 @@ namespace GameEngine
         /// <param name="arg">事件参数</param>
         public void Emit<T>(T arg)
         {
-            if (!_bindings.TryGetValue(typeof(T), out var raw)) return;
+            if (!_bindings.TryGetValue(typeof(T), out var raw))
+            {
+                return;
+            }
 
             var list = (BindingList<T>)raw;
 
             if (DebugMode)
+            {
                 Log.Debug($"[EventBus] Emit  <{typeof(T).Name}>  arg={arg}  listeners={list.Count}");
+            }
 
             // 快照遍历，避免回调内修改列表时出错
             var snapshot = list.ToArray();
@@ -167,7 +204,10 @@ namespace GameEngine
                 {
                     toRemove.Add(binding);
                     if (DebugMode)
+                    {
                         Log.Debug($"[EventBus]   └─ skip (expired/destroyed)  <{typeof(T).Name}>");
+                    }
+
                     continue;
                 }
 
@@ -175,7 +215,9 @@ namespace GameEngine
                 {
                     binding.TryInvoke(arg);
                     if (DebugMode)
+                    {
                         Log.Debug($"[EventBus]   └─ invoked  <{typeof(T).Name}>  once={binding.Once}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -183,12 +225,16 @@ namespace GameEngine
                 }
 
                 if (binding.Once)
+                {
                     toRemove.Add(binding);
+                }
             }
 
             // 批量清理过期 + once 绑定
             foreach (var b in toRemove)
+            {
                 list.Remove(b);
+            }
         }
 
         // ── 辅助 ─────────────────────────────────────────────────────────────────
@@ -197,7 +243,9 @@ namespace GameEngine
         {
             var type = typeof(T);
             if (_bindings.TryGetValue(type, out var raw))
+            {
                 return (BindingList<T>)raw;
+            }
 
             var list = new BindingList<T>();
             _bindings[type] = list;

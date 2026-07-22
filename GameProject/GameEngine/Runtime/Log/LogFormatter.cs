@@ -33,16 +33,31 @@ namespace GameEngine
             bool hasTime = !string.IsNullOrEmpty(timestamp);
             bool hasTag  = !string.IsNullOrEmpty(tag);
 
-            if (hasTime && hasTag)  return $"[{timestamp}][{level}][{tag}]";
-            if (hasTime)            return $"[{timestamp}][{level}]";
-            if (hasTag)             return $"[{level}][{tag}]";
+            if (hasTime && hasTag)
+            {
+                return $"[{timestamp}][{level}][{tag}]";
+            }
+
+            if (hasTime)
+            {
+                return $"[{timestamp}][{level}]";
+            }
+
+            if (hasTag)
+            {
+                return $"[{level}][{tag}]";
+            }
+
             return                         $"[{level}]";
         }
 
         private static string BuildBody(string header, string message, Exception exception)
         {
             if (exception != null)
+            {
                 return $"{header} {message}\n{exception}";
+            }
+
             return $"{header} {message}";
         }
     }

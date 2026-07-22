@@ -46,7 +46,11 @@ namespace GameEngine
             set
             {
                 var clamped = value < 0 ? 0 : value;
-                if (_selfCount == clamped) return;
+                if (_selfCount == clamped)
+                {
+                    return;
+                }
+
                 _selfCount = clamped;
                 RecalcCount();
             }
@@ -91,7 +95,9 @@ namespace GameEngine
         internal RedDotNode GetOrCreateChild(string childName)
         {
             if (_children.TryGetValue(childName, out var child))
+            {
                 return child;
+            }
 
             var childPath = Path.Length == 0 ? childName : Path + RedDotTree.PathSeparator + childName;
             child = new RedDotNode(childName, childPath, this);
@@ -106,10 +112,20 @@ namespace GameEngine
         /// </summary>
         public void AddObserver(IRedDotObserver observer)
         {
-            if (observer == null) throw new ArgumentNullException(nameof(observer));
-            if (_observers == null) _observers = new List<IRedDotObserver>();
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            if (_observers == null)
+            {
+                _observers = new List<IRedDotObserver>();
+            }
+
             if (!_observers.Contains(observer))
+            {
                 _observers.Add(observer);
+            }
         }
 
         /// <summary>移除接口观察者。</summary>
@@ -124,10 +140,20 @@ namespace GameEngine
         /// </summary>
         public void AddListener(Action<RedDotNode, int> callback)
         {
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
-            if (_callbacks == null) _callbacks = new List<Action<RedDotNode, int>>();
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+
+            if (_callbacks == null)
+            {
+                _callbacks = new List<Action<RedDotNode, int>>();
+            }
+
             if (!_callbacks.Contains(callback))
+            {
                 _callbacks.Add(callback);
+            }
         }
 
         /// <summary>移除委托回调。</summary>
@@ -152,9 +178,14 @@ namespace GameEngine
         {
             int newCount = _selfCount;
             foreach (var child in _children.Values)
+            {
                 newCount += child.Count;
+            }
 
-            if (newCount == Count) return;
+            if (newCount == Count)
+            {
+                return;
+            }
 
             Count = newCount;
             NotifyObservers();

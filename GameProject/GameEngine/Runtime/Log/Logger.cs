@@ -28,12 +28,18 @@ namespace GameEngine
         /// <summary>添加输出处理器（重复添加会被忽略）</summary>
         public Logger AddHandler(ILogHandler handler)
         {
-            if (handler == null || _disposed) return this;
+            if (handler == null || _disposed)
+            {
+                return this;
+            }
+
             _lock.EnterWriteLock();
             try
             {
                 if (!_handlers.Contains(handler))
+                {
                     _handlers.Add(handler);
+                }
             }
             finally { _lock.ExitWriteLock(); }
             return this;
@@ -42,7 +48,11 @@ namespace GameEngine
         /// <summary>移除输出处理器</summary>
         public Logger RemoveHandler(ILogHandler handler)
         {
-            if (handler == null || _disposed) return this;
+            if (handler == null || _disposed)
+            {
+                return this;
+            }
+
             _lock.EnterWriteLock();
             try { _handlers.Remove(handler); }
             finally { _lock.ExitWriteLock(); }
@@ -62,7 +72,10 @@ namespace GameEngine
 
         public void Write(LogLevel level, string message, Exception exception = null)
         {
-            if (_disposed || level < MinLevel) return;
+            if (_disposed || level < MinLevel)
+            {
+                return;
+            }
 
             // 读锁下复制快照，避免遍历中 Add/Remove 导致的竞态
             ILogHandler[] snapshot;
@@ -79,7 +92,11 @@ namespace GameEngine
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+            {
+                return;
+            }
+
             _disposed = true;
 
             _lock.EnterWriteLock();

@@ -43,7 +43,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new FsmManager();
+                if (_default == null)
+                {
+                    _default = new FsmManager();
+                }
+
                 return _default;
             }
         }

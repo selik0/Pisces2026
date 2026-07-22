@@ -57,10 +57,14 @@ namespace GameEngine
         public RedDotNode GetNode(string path)
         {
             if (string.IsNullOrEmpty(path))
+            {
                 throw new ArgumentNullException(nameof(path));
+            }
 
             if (_nodeCache.TryGetValue(path, out var cached))
+            {
                 return cached;
+            }
 
             var node = ResolveOrCreate(path);
             _nodeCache[path] = node;
@@ -72,7 +76,11 @@ namespace GameEngine
         /// </summary>
         public RedDotNode TryGetNode(string path)
         {
-            if (string.IsNullOrEmpty(path)) return null;
+            if (string.IsNullOrEmpty(path))
+            {
+                return null;
+            }
+
             _nodeCache.TryGetValue(path, out var node);
             return node;
         }
@@ -89,7 +97,10 @@ namespace GameEngine
         {
             var node = GetNode(path);
             if (DebugMode)
+            {
                 Log.Debug($"[RedDotTree] SetCount  '{path}'  {node.SelfCount} → {count}");
+            }
+
             node.SelfCount = count;
         }
 
@@ -103,7 +114,10 @@ namespace GameEngine
             var node = GetNode(path);
             var newVal = node.SelfCount + delta;
             if (DebugMode)
+            {
                 Log.Debug($"[RedDotTree] AddCount  '{path}'  delta={delta}  {node.SelfCount} → {newVal}");
+            }
+
             node.SelfCount = newVal;
         }
 
@@ -154,7 +168,9 @@ namespace GameEngine
         public void ResetCounts()
         {
             foreach (var node in _nodeCache.Values)
+            {
                 node.SelfCount = 0;
+            }
         }
 
         /// <summary>
@@ -167,7 +183,9 @@ namespace GameEngine
             // RedDotNode 不暴露 RemoveChild，通过创建新 root 实现完全重置
             // 直接清空缓存即可，旧节点失去引用后 GC 会回收
             if (DebugMode)
+            {
                 Log.Debug("[RedDotTree] Reset");
+            }
         }
 
         // ── 调试辅助 ─────────────────────────────────────────────────────────────
@@ -188,7 +206,9 @@ namespace GameEngine
             var indent = new string(' ', depth * 2);
             sb.AppendLine($"{indent}{node.Name}  Count={node.Count} (self={node.SelfCount})");
             foreach (var child in node.Children.Values)
+            {
                 DumpNode(child, sb, depth + 1);
+            }
         }
 
         // ── 私有辅助 ─────────────────────────────────────────────────────────────
@@ -197,7 +217,9 @@ namespace GameEngine
         {
             var segments = path.Split(SeparatorChars, StringSplitOptions.RemoveEmptyEntries);
             if (segments.Length == 0)
+            {
                 throw new ArgumentException($"路径无效：'{path}'", nameof(path));
+            }
 
             var current = _root;
             var builtPath = new System.Text.StringBuilder();
@@ -205,7 +227,11 @@ namespace GameEngine
             for (int i = 0; i < segments.Length; i++)
             {
                 var seg = segments[i];
-                if (i > 0) builtPath.Append(PathSeparator);
+                if (i > 0)
+                {
+                    builtPath.Append(PathSeparator);
+                }
+
                 builtPath.Append(seg);
 
                 var segPath = builtPath.ToString();
@@ -215,7 +241,9 @@ namespace GameEngine
                     _nodeCache[segPath] = child;
 
                     if (DebugMode)
+                    {
                         Log.Debug($"[RedDotTree] Created node '{segPath}'");
+                    }
                 }
                 current = child;
             }

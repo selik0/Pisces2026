@@ -69,7 +69,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new CoroutineScheduler();
+                if (_default == null)
+                {
+                    _default = new CoroutineScheduler();
+                }
+
                 return _default;
             }
         }

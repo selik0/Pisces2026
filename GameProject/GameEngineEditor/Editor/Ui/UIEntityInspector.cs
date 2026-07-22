@@ -128,9 +128,13 @@ namespace GameEngine.Ui
                 if (!string.IsNullOrEmpty(name))
                 {
                     if (nameCounts.ContainsKey(name))
+                    {
                         nameCounts[name]++;
+                    }
                     else
+                    {
                         nameCounts[name] = 1;
+                    }
                 }
             }
 
@@ -245,7 +249,9 @@ namespace GameEngine.Ui
             {
                 displayNames[j + 1] = allComponents[j].GetType().Name;
                 if (allComponents[j] == currentObj)
+                {
                     selectedIndex = j + 1;
+                }
             }
 
             int newIndex = EditorGUILayout.Popup(selectedIndex, displayNames, GUILayout.MinWidth(150));
@@ -266,10 +272,16 @@ namespace GameEngine.Ui
         private void AutoUpdatePropertyName(SerializedProperty nameProp, Component obj,
             Dictionary<string, BindRule> typeToRule, UIEntity collector)
         {
-            if (obj == null) return;
+            if (obj == null)
+            {
+                return;
+            }
 
             string typeFullName = obj.GetType().FullName;
-            if (!typeToRule.TryGetValue(typeFullName, out BindRule rule)) return;
+            if (!typeToRule.TryGetValue(typeFullName, out BindRule rule))
+            {
+                return;
+            }
 
             string nodeName = obj.gameObject.name;
             var bindings = UIEntityHelper.ParseNodeName(nodeName);
@@ -312,18 +324,28 @@ namespace GameEngine.Ui
             var nameCounts = new Dictionary<string, int>();
             foreach (var info in collector.ComponentList)
             {
-                if (info == null || string.IsNullOrEmpty(info.Name)) continue;
+                if (info == null || string.IsNullOrEmpty(info.Name))
+                {
+                    continue;
+                }
+
                 if (nameCounts.ContainsKey(info.Name))
+                {
                     nameCounts[info.Name]++;
+                }
                 else
+                {
                     nameCounts[info.Name] = 1;
+                }
             }
 
             var duplicates = new List<string>();
             foreach (var kvp in nameCounts)
             {
                 if (kvp.Value > 1)
+                {
                     duplicates.Add($"  · {kvp.Key}（出现 {kvp.Value} 次）");
+                }
             }
             if (duplicates.Count > 0)
             {
@@ -349,9 +371,15 @@ namespace GameEngine.Ui
             {
                 string msg = "存在组件引用丢失：";
                 if (nullObjCount > 0)
+                {
                     msg += $"\n  · {nullObjCount} 个条目对组件引用为 null（Obj 为空）";
+                }
+
                 if (nullInfoCount > 0)
+                {
                     msg += $"\n  · {nullInfoCount} 个条目为 null（缺失条目）";
+                }
+
                 msg += "\n\n丢失引用的条目将被跳过，不会生成对应属性。";
                 warnings.Add(msg);
             }
@@ -378,7 +406,10 @@ namespace GameEngine.Ui
             for (int i = 0; i < collector.ComponentList.Count; i++)
             {
                 ComponentInfo info = collector.ComponentList[i];
-                if (info == null || info.Obj == null) continue;
+                if (info == null || info.Obj == null)
+                {
+                    continue;
+                }
 
                 string propertyName = info.Name;
                 string typeName = GetTypeNameForComponent(info.Obj);
@@ -460,7 +491,11 @@ namespace GameEngine.Ui
         /// </summary>
         private string GetTypeNameForComponent(Component comp)
         {
-            if (comp == null) return "Component";
+            if (comp == null)
+            {
+                return "Component";
+            }
+
             return comp.GetType().FullName;
         }
 
@@ -477,7 +512,10 @@ namespace GameEngine.Ui
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var config = AssetDatabase.LoadAssetAtPath<ComponentBindConfig>(path);
-                if (config == null || config.Rules == null) continue;
+                if (config == null || config.Rules == null)
+                {
+                    continue;
+                }
 
                 foreach (var rule in config.Rules)
                 {
@@ -498,17 +536,26 @@ namespace GameEngine.Ui
         private BindRule FindRuleForProperty(UIEntity collector, ComponentInfo info)
         {
             var allRules = GetAllBindRulesFromAssetDatabase();
-            if (allRules.Count == 0) return null;
+            if (allRules.Count == 0)
+            {
+                return null;
+            }
 
             // 尝试通过节点解析反查：遍历所有子节点找到匹配 component 来定位对应的前缀
             var allTransforms = collector.GetComponentsInChildren<Transform>(true);
             foreach (var t in allTransforms)
             {
-                if (t == collector.transform) continue;
+                if (t == collector.transform)
+                {
+                    continue;
+                }
 
                 string nodeName = t.name;
                 var bindings = UIEntityHelper.ParseNodeName(nodeName);
-                if (bindings == null) continue;
+                if (bindings == null)
+                {
+                    continue;
+                }
 
                 foreach (var binding in bindings)
                 {
@@ -519,7 +566,9 @@ namespace GameEngine.Ui
                         foreach (var rule in allRules)
                         {
                             if (rule.Prefix == binding.Prefix)
+                            {
                                 return rule;
+                            }
                         }
                     }
                 }
@@ -537,7 +586,10 @@ namespace GameEngine.Ui
         /// </summary>
         private string ReplaceTemplate(string template, string propertyName, string gameObjectName)
         {
-            if (string.IsNullOrEmpty(template)) return template;
+            if (string.IsNullOrEmpty(template))
+            {
+                return template;
+            }
 
             return template
                 .Replace("{PropertyName}", propertyName)

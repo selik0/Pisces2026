@@ -37,7 +37,11 @@ namespace GameEngine
                                         Action<T> callback,
                                         bool once = false)
         {
-            if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
+            if (gameObject == null)
+            {
+                throw new ArgumentNullException(nameof(gameObject));
+            }
+
             EventSystem.Subscribe(callback, once, gameObject);
         }
 
@@ -47,7 +51,11 @@ namespace GameEngine
         /// </summary>
         public static void Unsubscribe<T>(this GameObject gameObject, Action<T> callback)
         {
-            if (gameObject == null) return;
+            if (gameObject == null)
+            {
+                return;
+            }
+
             EventSystem.Unsubscribe(callback);
         }
 
@@ -59,7 +67,11 @@ namespace GameEngine
         /// </summary>
         public static void UnsubscribeAll(this GameObject gameObject)
         {
-            if (gameObject == null) return;
+            if (gameObject == null)
+            {
+                return;
+            }
+
             EventSystem.UnsubscribeAll(gameObject);
         }
 
@@ -78,8 +90,16 @@ namespace GameEngine
                                         Action<T> callback,
                                         bool once = false)
         {
-            if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
-            if (bus == null)        throw new ArgumentNullException(nameof(bus));
+            if (gameObject == null)
+            {
+                throw new ArgumentNullException(nameof(gameObject));
+            }
+
+            if (bus == null)
+            {
+                throw new ArgumentNullException(nameof(bus));
+            }
+
             bus.Subscribe(callback, once, gameObject);
         }
 
@@ -89,7 +109,11 @@ namespace GameEngine
         /// </summary>
         public static void UnsubscribeAll(this GameObject gameObject, EventBus bus)
         {
-            if (gameObject == null || bus == null) return;
+            if (gameObject == null || bus == null)
+            {
+                return;
+            }
+
             bus.UnsubscribeAll(gameObject);
         }
     }

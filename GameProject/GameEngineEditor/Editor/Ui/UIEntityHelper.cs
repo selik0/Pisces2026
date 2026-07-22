@@ -44,13 +44,18 @@ namespace GameEngineEditor
             foreach (var rule in rules)
             {
                 if (rule == null || string.IsNullOrEmpty(rule.ClassName) || string.IsNullOrEmpty(rule.Prefix))
+                {
                     continue;
+                }
 
                 // 预解析类型（每个 ClassName 仅反射一次）
                 if (!typeCache.ContainsKey(rule.ClassName))
                 {
                     Type type = ResolveType(rule.ClassName);
-                    if (type != null) typeCache[rule.ClassName] = type;
+                    if (type != null)
+                    {
+                        typeCache[rule.ClassName] = type;
+                    }
                 }
 
                 if (rule.Auto)
@@ -71,7 +76,10 @@ namespace GameEngineEditor
             // ── 单次遍历所有子节点 ──
             foreach (var t in allTransforms)
             {
-                if (t == collector.transform) continue;
+                if (t == collector.transform)
+                {
+                    continue;
+                }
 
                 string nodeName = t.name;
                 var bindings = ParseNodeName(nodeName);
@@ -81,7 +89,10 @@ namespace GameEngineEditor
                 {
                     foreach (var binding in bindings)
                     {
-                        if (!namedRules.TryGetValue(binding.Prefix, out var rule)) continue;
+                        if (!namedRules.TryGetValue(binding.Prefix, out var rule))
+                        {
+                            continue;
+                        }
 
                         string propertyName = GeneratePropertyName(binding.Prefix, binding.NodeName);
                         CollectFromTransform(collector, t, rule, propertyName, typeCache, addedNames);
@@ -105,7 +116,10 @@ namespace GameEngineEditor
         private static void CollectFromTransform(UIEntity collector, Transform t, BindRule rule, string propertyName,
             Dictionary<string, Type> typeCache, HashSet<string> addedNames)
         {
-            if (!addedNames.Add(propertyName)) return;
+            if (!addedNames.Add(propertyName))
+            {
+                return;
+            }
 
             if (!typeCache.TryGetValue(rule.ClassName, out var type))
             {
@@ -130,19 +144,31 @@ namespace GameEngineEditor
         private static void CollectAllFromTransform(UIEntity collector, Transform t, BindRule rule, string basePropertyName,
             Dictionary<string, Type> typeCache, HashSet<string> addedNames)
         {
-            if (!typeCache.TryGetValue(rule.ClassName, out var type)) return;
+            if (!typeCache.TryGetValue(rule.ClassName, out var type))
+            {
+                return;
+            }
 
             Component[] comps = t.GetComponents(type);
-            if (comps == null || comps.Length == 0) return;
+            if (comps == null || comps.Length == 0)
+            {
+                return;
+            }
 
             for (int i = 0; i < comps.Length; i++)
             {
-                if (comps[i] == null) continue;
+                if (comps[i] == null)
+                {
+                    continue;
+                }
 
                 // 多个同类型组件时自动追加数字后缀，如 btnConfirm、btnConfirm2
                 string finalName = comps.Length > 1 ? basePropertyName + (i + 1) : basePropertyName;
 
-                if (!addedNames.Add(finalName)) continue;
+                if (!addedNames.Add(finalName))
+                {
+                    continue;
+                }
 
                 collector.ComponentList.Add(new ComponentInfo { Name = finalName, Obj = comps[i] });
             }
@@ -166,18 +192,27 @@ namespace GameEngineEditor
         /// <returns>解析到的类型，未找到返回 null</returns>
         public static Type ResolveType(string className)
         {
-            if (string.IsNullOrEmpty(className)) return null;
+            if (string.IsNullOrEmpty(className))
+            {
+                return null;
+            }
 
             // 先尝试直接获取
             Type type = Type.GetType(className);
-            if (type != null) return type;
+            if (type != null)
+            {
+                return type;
+            }
 
             // 遍历所有已加载的程序集
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (var asm in assemblies)
             {
                 type = asm.GetType(className);
-                if (type != null) return type;
+                if (type != null)
+                {
+                    return type;
+                }
             }
 
             return null;
@@ -192,11 +227,15 @@ namespace GameEngineEditor
         public static List<NodeNameBinding> ParseNodeName(string nodeName)
         {
             if (string.IsNullOrEmpty(nodeName))
+            {
                 return null;
+            }
 
             string[] parts = nodeName.Split('_');
             if (parts.Length < 2)
+            {
                 return null; // 至少需要一个缩写前缀和一个节点名
+            }
 
             // 最后一个字段是节点名称
             string nameField = parts[parts.Length - 1];
@@ -206,7 +245,10 @@ namespace GameEngineEditor
             for (int i = 0; i < parts.Length - 1; i++)
             {
                 string prefix = parts[i];
-                if (string.IsNullOrEmpty(prefix)) continue;
+                if (string.IsNullOrEmpty(prefix))
+                {
+                    continue;
+                }
 
                 result.Add(new NodeNameBinding
                 {
@@ -225,7 +267,9 @@ namespace GameEngineEditor
         public static string GeneratePropertyName(string prefix, string nodeName)
         {
             if (string.IsNullOrEmpty(nodeName))
+            {
                 return prefix;
+            }
 
             // 节点名转驼峰：首字母大写，其余保持
             string camelNodeName = char.ToUpper(nodeName[0]) + nodeName.Substring(1);

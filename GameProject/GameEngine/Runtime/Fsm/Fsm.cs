@@ -37,9 +37,15 @@ namespace GameEngine
         /// <param name="states">有限状态机状态集合（至少一个）</param>
         internal static Fsm<T> Create(string name, T owner, params FsmState<T>[] states)
         {
-            if (owner == null)   throw new ArgumentNullException(nameof(owner));
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
+            }
+
             if (states == null || states.Length == 0)
+            {
                 throw new ArgumentException("FSM 状态集合不能为空。", nameof(states));
+            }
 
             var fsm = new Fsm<T>
             {
@@ -49,10 +55,16 @@ namespace GameEngine
 
             foreach (var state in states)
             {
-                if (state == null) throw new ArgumentNullException(nameof(states), "FSM 状态不能为 null。");
+                if (state == null)
+                {
+                    throw new ArgumentNullException(nameof(states), "FSM 状态不能为 null。");
+                }
+
                 var type = state.GetType();
                 if (fsm._states.ContainsKey(type))
+                {
                     throw new ArgumentException($"FSM 已存在类型为 '{type.FullName}' 的状态，不能重复添加。");
+                }
 
                 fsm._states[type] = state;
                 ((IFsmState<T>)state).OnInit(fsm);
@@ -94,11 +106,19 @@ namespace GameEngine
         public void Start(Type stateType)
         {
             if (_isDestroyed)
+            {
                 throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已销毁，无法启动。");
+            }
+
             if (_currentState != null)
+            {
                 throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已在运行中。");
+            }
+
             if (stateType == null)
+            {
                 throw new ArgumentNullException(nameof(stateType));
+            }
 
             var state = GetStateInternal(stateType);
             _currentState     = state;
@@ -117,7 +137,11 @@ namespace GameEngine
         /// <inheritdoc/>
         public bool HasState(Type stateType)
         {
-            if (stateType == null) throw new ArgumentNullException(nameof(stateType));
+            if (stateType == null)
+            {
+                throw new ArgumentNullException(nameof(stateType));
+            }
+
             return _states.ContainsKey(stateType);
         }
 
@@ -130,7 +154,11 @@ namespace GameEngine
         /// <inheritdoc/>
         public FsmState<T> GetState(Type stateType)
         {
-            if (stateType == null) throw new ArgumentNullException(nameof(stateType));
+            if (stateType == null)
+            {
+                throw new ArgumentNullException(nameof(stateType));
+            }
+
             return GetStateInternal(stateType);
         }
 
@@ -140,7 +168,10 @@ namespace GameEngine
             var result = new FsmState<T>[_states.Count];
             int i = 0;
             foreach (var kv in _states)
+            {
                 result[i++] = kv.Value;
+            }
+
             return result;
         }
 
@@ -149,30 +180,49 @@ namespace GameEngine
         /// <inheritdoc/>
         public TData GetData<TData>(string name)
         {
-            if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
             if (_dataDict.TryGetValue(name, out var value))
+            {
                 return (TData)value;
+            }
+
             return default;
         }
 
         /// <inheritdoc/>
         public void SetData<TData>(string name, TData data)
         {
-            if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
             _dataDict[name] = data;
         }
 
         /// <inheritdoc/>
         public bool HasData(string name)
         {
-            if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
             return _dataDict.ContainsKey(name);
         }
 
         /// <inheritdoc/>
         public bool RemoveData(string name)
         {
-            if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
             return _dataDict.Remove(name);
         }
 
@@ -185,11 +235,20 @@ namespace GameEngine
         /// <inheritdoc/>
         public void ChangeState(Type stateType)
         {
-            if (stateType == null) throw new ArgumentNullException(nameof(stateType));
+            if (stateType == null)
+            {
+                throw new ArgumentNullException(nameof(stateType));
+            }
+
             if (_isDestroyed)
+            {
                 throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已销毁，无法切换状态。");
+            }
+
             if (_currentState == null)
+            {
                 throw new InvalidOperationException($"[FSM:{Name}] 有限状态机尚未启动，无法切换状态。");
+            }
 
             // 延迟到本帧 Tick 结束后执行
             _pendingStateType = stateType;
@@ -202,7 +261,10 @@ namespace GameEngine
         /// </summary>
         internal void Tick(float deltaTime)
         {
-            if (_isDestroyed || _currentState == null) return;
+            if (_isDestroyed || _currentState == null)
+            {
+                return;
+            }
 
             _currentStateTime += deltaTime;
             ((IFsmState<T>)_currentState).OnUpdate(this, deltaTime);
@@ -222,7 +284,11 @@ namespace GameEngine
         /// </summary>
         internal void Destroy()
         {
-            if (_isDestroyed) return;
+            if (_isDestroyed)
+            {
+                return;
+            }
+
             _isDestroyed = true;
 
             if (_currentState != null)
@@ -232,7 +298,9 @@ namespace GameEngine
             }
 
             foreach (var state in _states.Values)
+            {
                 ((IFsmState<T>)state).OnDestroy(this);
+            }
 
             _states.Clear();
             _dataDict.Clear();
@@ -246,15 +314,21 @@ namespace GameEngine
         private FsmState<T> GetStateInternal(Type stateType)
         {
             if (!_states.TryGetValue(stateType, out var state))
+            {
                 throw new InvalidOperationException(
                     $"[FSM:{Name}] 不存在类型为 '{stateType.FullName}' 的状态。");
+            }
+
             return state;
         }
 
         private void DoChangeState(Type newStateType)
         {
             var newState = GetStateInternal(newStateType);
-            if (ReferenceEquals(newState, _currentState)) return;
+            if (ReferenceEquals(newState, _currentState))
+            {
+                return;
+            }
 
             var oldStateName = _currentState.GetType().Name;
             ((IFsmState<T>)_currentState).OnLeave(this, isShutdown: false);

@@ -40,7 +40,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new EventBus();
+                if (_default == null)
+                {
+                    _default = new EventBus();
+                }
+
                 return _default;
             }
         }

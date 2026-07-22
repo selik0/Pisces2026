@@ -15,7 +15,10 @@ namespace GameEngine
 
         public void Write(LogLevel level, string tag, string message, Exception exception = null)
         {
-            if (level < MinLevel) return;
+            if (level < MinLevel)
+            {
+                return;
+            }
 
             string text = LogFormatter.FormatWithoutTimestamp(level, tag, message, exception);
 

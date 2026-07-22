@@ -84,7 +84,10 @@ namespace GameEngine
         /// <returns>组件实例，未找到或类型不匹配时返回 null</returns>
         public T GetCollectedComponent<T>(string name) where T : Component
         {
-            if (string.IsNullOrEmpty(name) || ComponentList == null) return null;
+            if (string.IsNullOrEmpty(name) || ComponentList == null)
+            {
+                return null;
+            }
 
             for (int i = 0; i < ComponentList.Count; i++)
             {

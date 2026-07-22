@@ -40,7 +40,10 @@ namespace GameEngine
             get
             {
                 if (_hasBoundObjectSet && _boundObject == null)
+                {
                     return true;  // GameObject 已销毁（Unity == null 重载）
+                }
+
                 return false;
             }
         }
@@ -74,7 +77,11 @@ namespace GameEngine
         /// </returns>
         public bool TryInvoke(T arg)
         {
-            if (IsExpired) return false;
+            if (IsExpired)
+            {
+                return false;
+            }
+
             Callback(arg);
             return true;
         }

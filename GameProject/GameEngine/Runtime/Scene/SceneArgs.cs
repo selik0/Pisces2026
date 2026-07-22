@@ -46,7 +46,10 @@ namespace GameEngine
         public T Get<T>(string key)
         {
             if (_data.TryGetValue(key, out var obj) && obj is T value)
+            {
                 return value;
+            }
+
             return default;
         }
 

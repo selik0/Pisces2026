@@ -45,17 +45,28 @@ namespace GameEngine
         /// <exception cref="InvalidOperationException">同名场景已存在时抛出</exception>
         public void Register(IScene scene)
         {
-            if (scene == null) throw new ArgumentNullException(nameof(scene));
+            if (scene == null)
+            {
+                throw new ArgumentNullException(nameof(scene));
+            }
+
             if (string.IsNullOrEmpty(scene.Name))
+            {
                 throw new ArgumentException("[SceneManager] 场景名称不能为空。");
+            }
+
             if (_scenes.ContainsKey(scene.Name))
+            {
                 throw new InvalidOperationException(
                     $"[SceneManager] 已存在名称为 '{scene.Name}' 的场景。");
+            }
 
             _scenes[scene.Name] = scene;
 
             if (DebugMode)
+            {
                 Log.Debug($"[SceneManager] 注册场景  name={scene.Name}");
+            }
         }
 
         /// <summary>
@@ -81,7 +92,9 @@ namespace GameEngine
             _scenes.Remove(name);
 
             if (DebugMode)
+            {
                 Log.Debug($"[SceneManager] 注销场景  name={name}");
+            }
         }
 
         // ── 查询 ─────────────────────────────────────────────────────────────────
@@ -127,8 +140,10 @@ namespace GameEngine
         public void SwitchTo(string name, SceneArgs args = null)
         {
             if (!_scenes.TryGetValue(name, out var next))
+            {
                 throw new InvalidOperationException(
                     $"[SceneManager] 未找到名称为 '{name}' 的场景，无法切换。");
+            }
 
             if (CurrentScene == next)
             {
@@ -137,7 +152,9 @@ namespace GameEngine
             }
 
             if (DebugMode)
+            {
                 Log.Debug($"[SceneManager] 切换场景  '{CurrentSceneName ?? "null"}' → '{name}'");
+            }
 
             // 退出当前场景
             ExitCurrentScene();
@@ -148,7 +165,9 @@ namespace GameEngine
             next.OnEnter(args);
 
             if (DebugMode)
+            {
                 Log.Debug($"[SceneManager] 场景切换完成  current='{name}'");
+            }
         }
 
         /// <summary>
@@ -193,19 +212,27 @@ namespace GameEngine
             CurrentScene = null;
 
             foreach (var scene in _scenes.Values)
+            {
                 scene.OnDestroy();
+            }
 
             _scenes.Clear();
 
             if (DebugMode)
+            {
                 Log.Debug("[SceneManager] 已销毁所有场景");
+            }
         }
 
         // ── 内部辅助 ─────────────────────────────────────────────────────────────
 
         private void ExitCurrentScene()
         {
-            if (CurrentScene == null) return;
+            if (CurrentScene == null)
+            {
+                return;
+            }
+
             CurrentScene.OnExit();
             SetSceneActive(CurrentScene, false);
         }
@@ -213,7 +240,9 @@ namespace GameEngine
         private static void SetSceneActive(IScene scene, bool active)
         {
             if (scene is SceneBase sceneBase)
+            {
                 sceneBase.SetActive(active);
+            }
         }
     }
 }

@@ -39,7 +39,11 @@ namespace GameEngine
         {
             get
             {
-                if (_default == null) _default = new TimerScheduler();
+                if (_default == null)
+                {
+                    _default = new TimerScheduler();
+                }
+
                 return _default;
             }
         }

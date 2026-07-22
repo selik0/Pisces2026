@@ -24,7 +24,9 @@ namespace GameEngineEditor
         public static List<List<string>> ReadSheet(string filePath, string sheetName = null, int skipRows = 0)
         {
             if (!File.Exists(filePath))
+            {
                 throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+            }
 
             var result = new List<List<string>>();
 
@@ -35,7 +37,9 @@ namespace GameEngineEditor
                     : package.Workbook.Worksheets[0];
 
                 if (sheet == null)
+                {
                     throw new ArgumentException($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                }
 
                 int rowCount = sheet.Dimension?.Rows ?? 0;
                 int colCount = sheet.Dimension?.Columns ?? 0;
@@ -67,7 +71,9 @@ namespace GameEngineEditor
             int headerRow = 1)
         {
             if (!File.Exists(filePath))
+            {
                 throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+            }
 
             var result = new List<Dictionary<string, string>>();
 
@@ -78,7 +84,9 @@ namespace GameEngineEditor
                     : package.Workbook.Worksheets[0];
 
                 if (sheet == null)
+                {
                     throw new ArgumentException($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                }
 
                 int rowCount = sheet.Dimension?.Rows ?? 0;
                 int colCount = sheet.Dimension?.Columns ?? 0;
@@ -86,7 +94,9 @@ namespace GameEngineEditor
                 // 读取表头
                 var headers = new List<string>();
                 for (int col = 1; col <= colCount; col++)
+                {
                     headers.Add(sheet.Cells[headerRow, col].Text ?? $"Col{col}");
+                }
 
                 // 读取数据行
                 for (int row = headerRow + 1; row <= rowCount; row++)
@@ -110,12 +120,18 @@ namespace GameEngineEditor
         public static List<string> GetSheetNames(string filePath)
         {
             if (!File.Exists(filePath))
+            {
                 throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+            }
 
             var names = new List<string>();
             using (var package = new ExcelPackage(new FileInfo(filePath)))
+            {
                 foreach (var ws in package.Workbook.Worksheets)
+                {
                     names.Add(ws.Name);
+                }
+            }
 
             return names;
         }
@@ -140,13 +156,19 @@ namespace GameEngineEditor
         {
             string dir = Path.GetDirectoryName(filePath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
 
             ExcelPackage package;
             if (File.Exists(filePath))
+            {
                 package = new ExcelPackage(new FileInfo(filePath));
+            }
             else
+            {
                 package = new ExcelPackage();
+            }
 
             using (package)
             {
@@ -155,9 +177,13 @@ namespace GameEngineEditor
                 if (existing != null)
                 {
                     if (overwrite)
+                    {
                         package.Workbook.Worksheets.Delete(existing);
+                    }
                     else
+                    {
                         sheetName = GetUniqueSheetName(package, sheetName);
+                    }
                 }
                 sheet = package.Workbook.Worksheets.Add(sheetName);
 
@@ -165,7 +191,9 @@ namespace GameEngineEditor
                 {
                     var rowData = data[row];
                     for (int col = 0; col < rowData.Count; col++)
+                    {
                         sheet.Cells[row + 1, col + 1].Value = rowData[col];
+                    }
                 }
 
                 package.SaveAs(new FileInfo(filePath));
@@ -186,27 +214,42 @@ namespace GameEngineEditor
             bool overwrite = true)
         {
             if (data == null || data.Count == 0)
+            {
                 return;
+            }
 
             // 收集所有列名（保持首次出现顺序）
             var headers = new List<string>();
             var headerSet = new HashSet<string>();
             foreach (var row in data)
+            {
                 foreach (var key in row.Keys)
+                {
                     if (headerSet.Add(key))
+                    {
                         headers.Add(key);
+                    }
+                }
+            }
 
             // 构建二维数组
             var rows = new List<IList<object>>();
             var headerRow = new List<object>(headers.Count);
-            foreach (var h in headers) headerRow.Add(h);
+            foreach (var h in headers)
+            {
+                headerRow.Add(h);
+            }
+
             rows.Add(headerRow);
 
             foreach (var row in data)
             {
                 var rowData = new List<object>(headers.Count);
                 foreach (var h in headers)
+                {
                     rowData.Add(row.TryGetValue(h, out var v) ? v : null);
+                }
+
                 rows.Add(rowData);
             }
 
@@ -222,7 +265,10 @@ namespace GameEngineEditor
             string name = baseName;
             int idx = 1;
             while (package.Workbook.Worksheets[name] != null)
+            {
                 name = $"{baseName}_{idx++}";
+            }
+
             return name;
         }
     }

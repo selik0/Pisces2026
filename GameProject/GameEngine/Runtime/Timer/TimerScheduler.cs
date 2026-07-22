@@ -64,8 +64,15 @@ namespace GameEngine
                                     float interval = 0f,
                                     int maxRepeat = 0)
         {
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
-            if (delay < 0f) delay = 0f;
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+
+            if (delay < 0f)
+            {
+                delay = 0f;
+            }
 
             float actualInterval = (repeat && interval > 0f) ? interval : delay;
 
@@ -82,12 +89,18 @@ namespace GameEngine
             };
 
             if (_isTicking)
+            {
                 _toAdd.Add(entry);
+            }
             else
+            {
                 _timers.Add(entry);
+            }
 
             if (DebugMode)
+            {
                 Log.Debug($"[Timer] Schedule  #{handle.Id}  delay={delay:F3}s  repeat={repeat}  interval={actualInterval:F3}s  maxRepeat={maxRepeat}");
+            }
 
             return handle;
         }
@@ -99,11 +112,17 @@ namespace GameEngine
         /// </summary>
         public void Cancel(TimerHandle handle)
         {
-            if (handle == null || handle.IsDone) return;
+            if (handle == null || handle.IsDone)
+            {
+                return;
+            }
+
             handle.Cancel();   // 标记为已完成，Tick 时会自动清理
 
             if (DebugMode)
+            {
                 Log.Debug($"[Timer] Cancel  #{handle.Id}");
+            }
         }
 
         /// <summary>
@@ -111,13 +130,23 @@ namespace GameEngine
         /// </summary>
         public void CancelAll()
         {
-            foreach (var e in _timers)  e.Handle.Cancel();
-            foreach (var e in _toAdd)   e.Handle.Cancel();
+            foreach (var e in _timers)
+            {
+                e.Handle.Cancel();
+            }
+
+            foreach (var e in _toAdd)
+            {
+                e.Handle.Cancel();
+            }
+
             _timers.Clear();
             _toAdd.Clear();
 
             if (DebugMode)
+            {
                 Log.Debug("[Timer] CancelAll");
+            }
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
@@ -143,7 +172,10 @@ namespace GameEngine
                 }
 
                 entry.Remaining -= deltaTime;
-                if (entry.Remaining > 0f) continue;
+                if (entry.Remaining > 0f)
+                {
+                    continue;
+                }
 
                 // 触发回调
                 try
@@ -152,7 +184,9 @@ namespace GameEngine
                     entry.RepeatCount++;
 
                     if (DebugMode)
+                    {
                         Log.Debug($"[Timer] Fired  #{entry.Handle.Id}  repeatCount={entry.RepeatCount}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -170,7 +204,10 @@ namespace GameEngine
                 {
                     // 重置剩余时间（累积误差补偿：用负的 Remaining 补入下一轮）
                     entry.Remaining += entry.Interval;
-                    if (entry.Remaining < 0f) entry.Remaining = 0f;
+                    if (entry.Remaining < 0f)
+                    {
+                        entry.Remaining = 0f;
+                    }
                 }
             }
 
