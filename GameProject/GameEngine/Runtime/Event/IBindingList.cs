@@ -1,17 +1,17 @@
+using System;
 using UnityEngine;
 
 namespace GameEngine
 {
     /// <summary>
-    /// 非泛型内部接口，用于 <see cref="EventBus"/> 对任意 <c>List&lt;EventBinding&lt;T&gt;&gt;</c>
-    /// 执行跨类型操作（例如按 GameObject 批量解绑），规避 C# 泛型擦除问题。
+    /// 事件绑定列表的非泛型接口，用于按 GameObject 跨 EventKey 解绑。
     /// </summary>
     internal interface IBindingList
     {
-        /// <summary>当前绑定数量</summary>
         int Count { get; }
 
-        /// <summary>移除所有绑定了指定 <paramref name="target"/> 的项</summary>
+        Type CallbackType { get; }
+
         void RemoveByBoundObject(GameObject target);
     }
 }

@@ -4,38 +4,18 @@ using UnityEngine;
 namespace GameEngine
 {
     /// <summary>
-    /// 全局事件系统静态入口，内部持有默认的 <see cref="EventBus"/> 单例。
-    /// 游戏启动时无需显式初始化，第一次访问时自动创建。
-    ///
-    /// <code>
-    /// // 定义事件参数类型（普通 struct 或 class 均可）
-    /// public struct ScoreChangedEvent { public int Score; }
-    /// public struct PlayerDiedEvent   { public string Reason; }
-    ///
-    /// // 订阅
-    /// EventSystem.Subscribe&lt;ScoreChangedEvent&gt;(e => RefreshUI(e.Score));
-    ///
-    /// // 只订阅一次
-    /// EventSystem.Subscribe&lt;PlayerDiedEvent&gt;(e => ShowGameOver(), once: true);
-    ///
-    /// // 绑定 GameObject 生命周期（对象销毁后自动解绑）
-    /// EventSystem.Subscribe&lt;ScoreChangedEvent&gt;(e => RefreshUI(e.Score), boundObject: gameObject);
-    ///
-    /// // 发布
-    /// EventSystem.Emit(new ScoreChangedEvent { Score = 100 });
-    ///
-    /// // 取消订阅
-    /// EventSystem.Unsubscribe&lt;ScoreChangedEvent&gt;(myCallback);
-    ///
-    /// // 开启 Debug 模式
-    /// EventSystem.DebugMode = true;
-    /// </code>
+    /// 全局事件系统静态入口，以 int 类型 EventKey 路由，支持零到三个参数。
     /// </summary>
+    /// <code>
+    /// const int ScoreChanged = 1;
+    /// EventSystem.Subscribe&lt;int&gt;(ScoreChanged, score => RefreshUI(score));
+    /// EventSystem.Emit(ScoreChanged, 100);
+    /// </code>
     public static class EventSystem
     {
         private static EventBus _default;
 
-        /// <summary>全局默认 EventBus 实例（懒初始化）</summary>
+        /// <summary>全局默认 EventBus 实例。</summary>
         public static EventBus Default
         {
             get
@@ -49,48 +29,88 @@ namespace GameEngine
             }
         }
 
-        /// <summary>
-        /// 是否开启 Debug 模式（透传给 Default bus）。
-        /// 开启后所有 Subscribe / Emit / Unsubscribe 均会打印调用日志。
-        /// </summary>
         public static bool DebugMode
         {
             get => Default.DebugMode;
             set => Default.DebugMode = value;
         }
 
-        // ── 全局快捷方法（委托给 Default bus）───────────────────────────────────
+        public static void Subscribe(int eventKey, Action callback, bool once = false, GameObject boundObject = null)
+        {
+            Default.Subscribe(eventKey, callback, once, boundObject);
+        }
 
-        /// <inheritdoc cref="EventBus.Subscribe{T}"/>
-        public static void Subscribe<T>(Action<T> callback,
-                                        bool once = false,
-                                        GameObject boundObject = null)
-            => Default.Subscribe(callback, once, boundObject);
+        public static void Subscribe<T1>(int eventKey, Action<T1> callback, bool once = false, GameObject boundObject = null)
+        {
+            Default.Subscribe(eventKey, callback, once, boundObject);
+        }
 
-        /// <inheritdoc cref="EventBus.Unsubscribe{T}"/>
-        public static void Unsubscribe<T>(Action<T> callback)
-            => Default.Unsubscribe(callback);
+        public static void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback, bool once = false, GameObject boundObject = null)
+        {
+            Default.Subscribe(eventKey, callback, once, boundObject);
+        }
 
-        /// <inheritdoc cref="EventBus.UnsubscribeAll(GameObject)"/>
+        public static void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback, bool once = false, GameObject boundObject = null)
+        {
+            Default.Subscribe(eventKey, callback, once, boundObject);
+        }
+
+        public static void Unsubscribe(int eventKey, Action callback)
+        {
+            Default.Unsubscribe(eventKey, callback);
+        }
+
+        public static void Unsubscribe<T1>(int eventKey, Action<T1> callback)
+        {
+            Default.Unsubscribe(eventKey, callback);
+        }
+
+        public static void Unsubscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
+        {
+            Default.Unsubscribe(eventKey, callback);
+        }
+
+        public static void Unsubscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
+        {
+            Default.Unsubscribe(eventKey, callback);
+        }
+
         public static void UnsubscribeAll(GameObject boundObject)
-            => Default.UnsubscribeAll(boundObject);
+        {
+            Default.UnsubscribeAll(boundObject);
+        }
 
-        /// <inheritdoc cref="EventBus.Emit{T}"/>
-        public static void Emit<T>(T arg)
-            => Default.Emit(arg);
+        public static void Emit(int eventKey)
+        {
+            Default.Emit(eventKey);
+        }
 
-        /// <inheritdoc cref="EventBus.Clear{T}"/>
-        public static void Clear<T>()
-            => Default.Clear<T>();
+        public static void Emit<T1>(int eventKey, T1 arg1)
+        {
+            Default.Emit(eventKey, arg1);
+        }
 
-        /// <inheritdoc cref="EventBus.ClearAll"/>
+        public static void Emit<T1, T2>(int eventKey, T1 arg1, T2 arg2)
+        {
+            Default.Emit(eventKey, arg1, arg2);
+        }
+
+        public static void Emit<T1, T2, T3>(int eventKey, T1 arg1, T2 arg2, T3 arg3)
+        {
+            Default.Emit(eventKey, arg1, arg2, arg3);
+        }
+
+        public static void Clear(int eventKey)
+        {
+            Default.Clear(eventKey);
+        }
+
         public static void ClearAll()
-            => Default.ClearAll();
+        {
+            Default.ClearAll();
+        }
 
-        /// <summary>
-        /// 重置全局 bus（测试用，游戏运行时慎用）。
-        /// 会丢弃所有订阅。
-        /// </summary>
+        /// <summary>重置全局事件总线并丢弃全部订阅。</summary>
         public static void Reset()
         {
             _default?.ClearAll();

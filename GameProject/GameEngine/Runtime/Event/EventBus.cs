@@ -5,111 +5,60 @@ using UnityEngine;
 namespace GameEngine
 {
     /// <summary>
-    /// 事件总线，以事件参数的 <see cref="Type"/> 为路由键进行类型安全的发布/订阅。
-    /// 每个事件类型对应一组订阅者，无需额外的事件键定义。
-    ///
-    /// <para><b>核心特性</b></para>
-    /// <list type="bullet">
-    ///   <item>以参数类型路由，编译期类型安全</item>
-    ///   <item>支持 once 模式：触发一次后自动解绑</item>
-    ///   <item>支持 GameObject 生命周期绑定：对象销毁后自动解绑</item>
-    ///   <item>Debug 模式：每次 Subscribe / Emit 均输出调用信息</item>
-    /// </list>
-    ///
-    /// <para><b>非线程安全</b>，应仅在 Unity 主线程使用。</para>
-    ///
-    /// <code>
-    /// var bus = new EventBus { DebugMode = true };
-    ///
-    /// // 订阅
-    /// bus.Subscribe&lt;ScoreChangedEvent&gt;(e => UpdateUI(e.Score));
-    ///
-    /// // once 模式
-    /// bus.Subscribe&lt;PlayerDiedEvent&gt;(e => ShowGameOver(), once: true);
-    ///
-    /// // 绑定 GameObject 生命周期
-    /// bus.Subscribe&lt;ScoreChangedEvent&gt;(e => UpdateUI(e.Score), boundObject: this.gameObject);
-    ///
-    /// // 发布
-    /// bus.Emit(new ScoreChangedEvent { Score = 100 });
-    ///
-    /// // 取消订阅
-    /// bus.Unsubscribe&lt;ScoreChangedEvent&gt;(myCallback);
-    /// </code>
+    /// 以 int 类型 EventKey 路由的事件总线，支持零到三个事件参数。
+    /// 同一个 EventKey 必须始终使用相同的参数数量和参数类型。
     /// </summary>
+    /// <remarks>非线程安全，应仅在 Unity 主线程使用。</remarks>
     public sealed class EventBus
     {
-        // Type → BindingList<T>（存为 object 规避泛型擦除）
-        private readonly Dictionary<Type, object> _bindings = new Dictionary<Type, object>();
+        private readonly Dictionary<int, IBindingList> _bindings = new Dictionary<int, IBindingList>();
 
         /// <summary>
-        /// 是否开启 Debug 模式。
-        /// 开启后，Subscribe / Unsubscribe / Emit 均通过 <see cref="Log"/> 输出调用信息。
+        /// 开启后，订阅、取消订阅和派发操作会通过 <see cref="Log"/> 输出日志。
         /// </summary>
         public bool DebugMode { get; set; }
 
-        // ── Subscribe ────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 订阅事件。
-        /// </summary>
-        /// <typeparam name="T">事件参数类型，同时作为路由键</typeparam>
-        /// <param name="callback">回调，不可为 null</param>
-        /// <param name="once">true 表示只触发一次后自动解绑</param>
-        /// <param name="boundObject">
-        /// 绑定的 Unity GameObject。该对象被销毁后，此订阅自动失效。
-        /// 传 null 表示不绑定生命周期。
-        /// </param>
-        public void Subscribe<T>(Action<T> callback, bool once = false, GameObject boundObject = null)
+        public void Subscribe(int eventKey, Action callback, bool once = false, GameObject boundObject = null)
         {
-            if (callback == null)
-            {
-                throw new ArgumentNullException(nameof(callback));
-            }
-
-            var list = GetOrCreateList<T>();
-            list.Add(new EventBinding<T>(callback, once, boundObject));
-
-            if (DebugMode)
-            {
-                Log.Debug($"[EventBus] Subscribe  <{typeof(T).Name}>  once={once}  bound={BoundName(boundObject)}  listeners={list.Count}");
-            }
+            SubscribeInternal(eventKey, callback, once, boundObject);
         }
 
-        // ── Unsubscribe ──────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 取消订阅指定回调。若同一回调注册了多次，全部移除。
-        /// </summary>
-        /// <typeparam name="T">事件参数类型</typeparam>
-        /// <param name="callback">要移除的回调</param>
-        public void Unsubscribe<T>(Action<T> callback)
+        public void Subscribe<T1>(int eventKey, Action<T1> callback, bool once = false, GameObject boundObject = null)
         {
-            if (callback == null)
-            {
-                return;
-            }
-
-            if (!_bindings.TryGetValue(typeof(T), out var raw))
-            {
-                return;
-            }
-
-            var list = (BindingList<T>)raw;
-            int removed = list.RemoveAll(b => b.Callback == callback);
-
-            if (DebugMode)
-            {
-                Log.Debug($"[EventBus] Unsubscribe  <{typeof(T).Name}>  removed={removed}  listeners={list.Count}");
-            }
+            SubscribeInternal(eventKey, callback, once, boundObject);
         }
 
-        /// <summary>
-        /// 移除与指定 <paramref name="boundObject"/> 绑定的所有订阅（跨所有事件类型）。
-        /// 通常不需要手动调用——Emit 时会自动清理过期绑定。
-        /// 若要主动提前解绑某个对象的所有监听，可调用此方法。
-        /// </summary>
-        /// <param name="boundObject">要解绑的 GameObject</param>
+        public void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback, bool once = false, GameObject boundObject = null)
+        {
+            SubscribeInternal(eventKey, callback, once, boundObject);
+        }
+
+        public void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback, bool once = false, GameObject boundObject = null)
+        {
+            SubscribeInternal(eventKey, callback, once, boundObject);
+        }
+
+        public void Unsubscribe(int eventKey, Action callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1>(int eventKey, Action<T1> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        /// <summary>移除指定 GameObject 在此事件总线上的所有绑定。</summary>
         public void UnsubscribeAll(GameObject boundObject)
         {
             if (boundObject == null)
@@ -117,142 +66,176 @@ namespace GameEngine
                 return;
             }
 
-            foreach (var raw in _bindings.Values)
+            int removed = 0;
+            foreach (IBindingList list in _bindings.Values)
             {
-                if (raw is IBindingList bl)
-                {
-                    bl.RemoveByBoundObject(boundObject);
-                }
+                int previousCount = list.Count;
+                list.RemoveByBoundObject(boundObject);
+                removed += previousCount - list.Count;
             }
 
             if (DebugMode)
             {
-                Log.Debug($"[EventBus] UnsubscribeAll  bound={BoundName(boundObject)}");
+                Log.Debug($"[EventBus] UnsubscribeAll bound={BoundName(boundObject)} removed={removed}");
             }
         }
 
-        /// <summary>清除指定事件类型下的所有订阅。</summary>
-        /// <typeparam name="T">事件参数类型</typeparam>
-        public void Clear<T>()
+        /// <summary>清除指定 EventKey 下的所有订阅。</summary>
+        public void Clear(int eventKey)
         {
-            if (_bindings.TryGetValue(typeof(T), out var raw))
-            {
-                var list = (BindingList<T>)raw;
-                int count = list.Count;
-                list.Clear();
-
-                if (DebugMode)
-                {
-                    Log.Debug($"[EventBus] Clear  <{typeof(T).Name}>  removed={count}");
-                }
-            }
-        }
-
-        /// <summary>清除所有事件类型的所有订阅。</summary>
-        public void ClearAll()
-        {
-            int total = 0;
-            foreach (var raw in _bindings.Values)
-            {
-                if (raw is IBindingList bl)
-                {
-                    total += bl.Count;
-                }
-            }
-
-            _bindings.Clear();
-
-            if (DebugMode)
-            {
-                Log.Debug($"[EventBus] ClearAll  removed={total}");
-            }
-        }
-
-        // ── Emit ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 发布事件，依次调用所有有效订阅者。
-        /// <para>
-        /// 执行顺序：按订阅先后（FIFO）。<br/>
-        /// 安全：过期绑定（GameObject 已销毁 / once 已触发）在此次 Emit 后被清理。<br/>
-        /// 稳定：Emit 期间新增的订阅不会在本次派发中触发（快照遍历）。
-        /// </para>
-        /// </summary>
-        /// <typeparam name="T">事件参数类型（由传入实参推断）</typeparam>
-        /// <param name="arg">事件参数</param>
-        public void Emit<T>(T arg)
-        {
-            if (!_bindings.TryGetValue(typeof(T), out var raw))
+            if (!_bindings.TryGetValue(eventKey, out IBindingList list))
             {
                 return;
             }
 
-            var list = (BindingList<T>)raw;
+            _bindings.Remove(eventKey);
+            if (DebugMode)
+            {
+                Log.Debug($"[EventBus] Clear key={eventKey} removed={list.Count}");
+            }
+        }
+
+        /// <summary>清除全部订阅。</summary>
+        public void ClearAll()
+        {
+            int removed = 0;
+            foreach (IBindingList list in _bindings.Values)
+            {
+                removed += list.Count;
+            }
+
+            _bindings.Clear();
+            if (DebugMode)
+            {
+                Log.Debug($"[EventBus] ClearAll removed={removed}");
+            }
+        }
+
+        public void Emit(int eventKey)
+        {
+            EmitInternal<Action>(eventKey, callback => callback());
+        }
+
+        public void Emit<T1>(int eventKey, T1 arg1)
+        {
+            EmitInternal<Action<T1>>(eventKey, callback => callback(arg1));
+        }
+
+        public void Emit<T1, T2>(int eventKey, T1 arg1, T2 arg2)
+        {
+            EmitInternal<Action<T1, T2>>(eventKey, callback => callback(arg1, arg2));
+        }
+
+        public void Emit<T1, T2, T3>(int eventKey, T1 arg1, T2 arg2, T3 arg3)
+        {
+            EmitInternal<Action<T1, T2, T3>>(eventKey, callback => callback(arg1, arg2, arg3));
+        }
+
+        private void SubscribeInternal<TCallback>(int eventKey, TCallback callback, bool once, GameObject boundObject)
+            where TCallback : Delegate
+        {
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+
+            BindingList<TCallback> list = GetOrCreateList<TCallback>(eventKey);
+            list.Add(new EventBinding<TCallback>(callback, once, boundObject));
 
             if (DebugMode)
             {
-                Log.Debug($"[EventBus] Emit  <{typeof(T).Name}>  arg={arg}  listeners={list.Count}");
+                Log.Debug($"[EventBus] Subscribe key={eventKey} signature={typeof(TCallback).Name} once={once} bound={BoundName(boundObject)} listeners={list.Count}");
+            }
+        }
+
+        private void UnsubscribeInternal<TCallback>(int eventKey, TCallback callback) where TCallback : Delegate
+        {
+            if (callback == null || !_bindings.TryGetValue(eventKey, out IBindingList rawList))
+            {
+                return;
             }
 
-            // 快照遍历，避免回调内修改列表时出错
-            var snapshot = list.ToArray();
-            var toRemove = new List<EventBinding<T>>();
+            BindingList<TCallback> list = GetList<TCallback>(eventKey, rawList);
+            int removed = list.RemoveAll(binding => binding.Callback.Equals(callback));
 
-            foreach (var binding in snapshot)
+            if (DebugMode)
+            {
+                Log.Debug($"[EventBus] Unsubscribe key={eventKey} removed={removed} listeners={list.Count}");
+            }
+        }
+
+        private void EmitInternal<TCallback>(int eventKey, Action<TCallback> invoke) where TCallback : Delegate
+        {
+            if (!_bindings.TryGetValue(eventKey, out IBindingList rawList))
+            {
+                return;
+            }
+
+            BindingList<TCallback> list = GetList<TCallback>(eventKey, rawList);
+            EventBinding<TCallback>[] snapshot = list.ToArray();
+            var toRemove = new List<EventBinding<TCallback>>();
+
+            if (DebugMode)
+            {
+                Log.Debug($"[EventBus] Emit key={eventKey} signature={typeof(TCallback).Name} listeners={list.Count}");
+            }
+
+            foreach (EventBinding<TCallback> binding in snapshot)
             {
                 if (binding.IsExpired)
                 {
                     toRemove.Add(binding);
-                    if (DebugMode)
-                    {
-                        Log.Debug($"[EventBus]   └─ skip (expired/destroyed)  <{typeof(T).Name}>");
-                    }
-
                     continue;
-                }
-
-                try
-                {
-                    binding.TryInvoke(arg);
-                    if (DebugMode)
-                    {
-                        Log.Debug($"[EventBus]   └─ invoked  <{typeof(T).Name}>  once={binding.Once}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"[EventBus] Exception in listener for <{typeof(T).Name}>", ex);
                 }
 
                 if (binding.Once)
                 {
-                    toRemove.Add(binding);
+                    list.Remove(binding);
+                }
+
+                try
+                {
+                    invoke(binding.Callback);
+                }
+                catch (Exception exception)
+                {
+                    Log.Error($"[EventBus] Exception in listener for key={eventKey}", exception);
                 }
             }
 
-            // 批量清理过期 + once 绑定
-            foreach (var b in toRemove)
+            foreach (EventBinding<TCallback> binding in toRemove)
             {
-                list.Remove(b);
+                list.Remove(binding);
             }
         }
 
-        // ── 辅助 ─────────────────────────────────────────────────────────────────
-
-        private BindingList<T> GetOrCreateList<T>()
+        private BindingList<TCallback> GetOrCreateList<TCallback>(int eventKey) where TCallback : Delegate
         {
-            var type = typeof(T);
-            if (_bindings.TryGetValue(type, out var raw))
+            if (_bindings.TryGetValue(eventKey, out IBindingList rawList))
             {
-                return (BindingList<T>)raw;
+                return GetList<TCallback>(eventKey, rawList);
             }
 
-            var list = new BindingList<T>();
-            _bindings[type] = list;
+            var list = new BindingList<TCallback>();
+            _bindings.Add(eventKey, list);
             return list;
         }
 
-        private static string BoundName(GameObject obj)
-            => obj != null ? obj.name : "none";
+        private static BindingList<TCallback> GetList<TCallback>(int eventKey, IBindingList rawList)
+            where TCallback : Delegate
+        {
+            if (rawList is BindingList<TCallback> list)
+            {
+                return list;
+            }
+
+            throw new InvalidOperationException(
+                $"EventKey {eventKey} uses callback type {rawList.CallbackType}, not {typeof(TCallback)}.");
+        }
+
+        private static string BoundName(GameObject boundObject)
+        {
+            return boundObject != null ? boundObject.name : "none";
+        }
     }
 }
