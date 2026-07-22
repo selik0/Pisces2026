@@ -29,7 +29,7 @@ namespace GameEngineEditor
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace GameEngine.Ui
+namespace GameEngine
 {{
     public partial class {ClassName} : UIEntity
     {{
