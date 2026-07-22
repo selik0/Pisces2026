@@ -1,251 +1,525 @@
+using System;
+using System.Runtime.ExceptionServices;
 using UnityEngine;
 
 namespace GameEngine
 {
+    /// <summary>UI 逻辑块生命周期状态。</summary>
+    public enum UIBrickState
+    {
+        Uninitialized,
+        Creating,
+        Created,
+        Opening,
+        Opened,
+        Showing,
+        Visible,
+        Hiding,
+        Closing,
+        Destroying,
+        Destroyed
+    }
+
     /// <summary>
     /// UI 逻辑块基类。
-    /// 用于绑定 UIEntity，统一管理 UI 的生命周期，并提供 GameObject、Transform、组件访问等快捷能力。
-    /// 子类通过重写 OnXxx 方法实现具体 UI 逻辑。
+    /// 标准生命周期为 Create -> Open -> Show -> Hide -> Close -> Destroy。
+    /// Open 会自动 Show；Close 和 Destroy 会按需执行前置阶段。
     /// </summary>
     public abstract class UIBrick
     {
-        /// <summary>UI 预制体路径</summary>
+        private bool _eventsRegistered;
+        private bool _destroyRequested;
+
+        /// <summary>UI 预制体路径。</summary>
         public string PrefabPath { get; protected set; }
-        
-        /// <summary>绑定的 UIEntity</summary>
-        public UIEntity Entity { get; protected set; }
 
-        /// <summary>绑定的 GameObject（UIEntity.gameObject 快捷方式）</summary>
-        public GameObject GameObject { get; protected set; }
+        /// <summary>绑定的 UIEntity。</summary>
+        public UIEntity Entity { get; private set; }
 
-        /// <summary>绑定的 Transform（UIEntity.transform 快捷方式）</summary>
-        public Transform Transform { get; protected set; }
+        /// <summary>绑定的 GameObject。</summary>
+        public GameObject GameObject { get; private set; }
 
-        /// <summary>是否已绑定 UIEntity</summary>
+        /// <summary>绑定的 Transform。</summary>
+        public Transform Transform { get; private set; }
+
+        /// <summary>当前生命周期状态。</summary>
+        public UIBrickState State { get; private set; } = UIBrickState.Uninitialized;
+
         public bool IsBound => Entity != null;
-
-        /// <summary>是否已创建</summary>
-        public bool IsCreated { get; protected set; }
-
-        /// <summary>是否已打开</summary>
-        public bool IsOpened { get; protected set; }
-
-        /// <summary>是否已显示</summary>
-        public bool IsVisible { get; protected set; }
-
-        /// <summary>是否已销毁</summary>
-        public bool IsDestroyed { get; protected set; }
-
-        // ── UIEntity 创建 / 销毁 ──
+        public bool IsCreated { get; private set; }
+        public bool IsOpened { get; private set; }
+        public bool IsVisible { get; private set; }
+        public bool IsPaused { get; private set; }
+        public bool IsDestroyed => State == UIBrickState.Destroyed;
 
         /// <summary>
-        /// 创建 UI 逻辑块并绑定 UIEntity。通常由 UI 框架在加载或实例化 UI 后调用。
+        /// 绑定 UIEntity 并执行一次性初始化。一个实例只能创建一次。
         /// </summary>
-        /// <param name="entity">UI 根节点上的 UIEntity</param>
         public void Create(UIEntity entity)
         {
             if (entity == null)
             {
-                Debug.LogError($"[UIBrick] Create failed: entity is null for {GetType().Name}");
+                Debug.LogError($"[UIBrick] Create failed: entity is null for {GetType().Name}.");
                 return;
             }
 
-            if (IsDestroyed)
+            if (State != UIBrickState.Uninitialized)
             {
-                Debug.LogWarning($"[UIBrick] {GetType().Name} is destroyed, create ignored.");
+                Debug.LogWarning($"[UIBrick] {GetType().Name} cannot be created from state {State}.");
                 return;
             }
 
-            if (Entity != null)
-            {
-                Debug.LogWarning($"[UIBrick] {GetType().Name} is already bound to a UIEntity, replacing.");
-                Destroy();
-                IsDestroyed = false;
-            }
-
+            State = UIBrickState.Creating;
             Entity = entity;
             GameObject = entity.gameObject;
             Transform = entity.transform;
             Entity.AddDestroyListener(OnEntityDestroyed);
 
-            OnBind();
+            try
+            {
+                OnBind();
+                IsCreated = true;
+                OnCreate();
+                State = UIBrickState.Created;
+            }
+            catch (Exception exception)
+            {
+                bool destroyRequested = _destroyRequested;
+                RollbackCreate();
 
-            IsCreated = true;
-            OnCreate();
+                if (destroyRequested)
+                {
+                    _destroyRequested = true;
+                    ProcessDestroyRequest(ref exception);
+                }
+
+                Throw(exception);
+            }
+
+            ProcessDestroyRequest();
         }
 
         /// <summary>
-        /// 销毁 UI 逻辑块并解除当前 UIEntity 绑定。
+        /// 打开 UI。注册事件并执行 OnOpen 后自动进入显示阶段。
+        /// </summary>
+        public void Open()
+        {
+            if (State == UIBrickState.Opened)
+            {
+                Show();
+                return;
+            }
+
+            if (State != UIBrickState.Created) return;
+
+            State = UIBrickState.Opening;
+            IsOpened = true;
+            bool opened = false;
+
+            try
+            {
+                _eventsRegistered = true;
+                RegisterEvents();
+
+                if (!_destroyRequested)
+                {
+                    OnOpen();
+                    opened = true;
+                }
+
+                if (_destroyRequested)
+                {
+                    RollbackOpen(opened);
+                }
+                else
+                {
+                    State = UIBrickState.Opened;
+                    Show();
+                }
+            }
+            catch (Exception exception)
+            {
+                if (State != UIBrickState.Destroyed)
+                {
+                    RollbackOpen(opened);
+                }
+
+                ProcessDestroyRequest(ref exception);
+                Throw(exception);
+            }
+
+            ProcessDestroyRequest();
+        }
+
+        /// <summary>显示已打开的 UI。</summary>
+        public void Show()
+        {
+            if (State != UIBrickState.Opened || _destroyRequested) return;
+
+            State = UIBrickState.Showing;
+            IsVisible = true;
+
+            try
+            {
+                OnShow();
+                State = UIBrickState.Visible;
+            }
+            catch (Exception exception)
+            {
+                InvokeCleanup(OnHide);
+                IsVisible = false;
+                IsPaused = false;
+                State = UIBrickState.Opened;
+                ProcessDestroyRequest(ref exception);
+                Throw(exception);
+            }
+
+            ProcessDestroyRequest();
+        }
+
+        /// <summary>隐藏 UI，但保留本次打开的数据和事件订阅。</summary>
+        public void Hide()
+        {
+            if (State != UIBrickState.Visible) return;
+
+            Exception exception = null;
+            State = UIBrickState.Hiding;
+            InvokeLifecycle(OnHide, ref exception);
+            IsVisible = false;
+            IsPaused = false;
+            State = UIBrickState.Opened;
+
+            ProcessDestroyRequest(ref exception);
+            Throw(exception);
+        }
+
+        /// <summary>UI 被同层级中的其他界面覆盖时暂停。</summary>
+        public void Pause()
+        {
+            if (State != UIBrickState.Visible || IsPaused || _destroyRequested) return;
+
+            IsPaused = true;
+            try
+            {
+                OnPause();
+            }
+            catch (Exception exception)
+            {
+                IsPaused = false;
+                ProcessDestroyRequest(ref exception);
+                Throw(exception);
+            }
+
+            ProcessDestroyRequest();
+        }
+
+        /// <summary>UI 不再被覆盖时恢复。</summary>
+        public void Resume()
+        {
+            if (State != UIBrickState.Visible || !IsPaused || _destroyRequested) return;
+
+            IsPaused = false;
+            try
+            {
+                OnResume();
+            }
+            catch (Exception exception)
+            {
+                if (State == UIBrickState.Visible && !_destroyRequested)
+                {
+                    IsPaused = true;
+                }
+
+                ProcessDestroyRequest(ref exception);
+                Throw(exception);
+            }
+
+            ProcessDestroyRequest();
+        }
+
+        /// <summary>关闭 UI。可见时先 Hide，随后执行 OnClose 并注销事件。</summary>
+        public void Close()
+        {
+            if (State != UIBrickState.Opened && State != UIBrickState.Visible) return;
+
+            Exception exception = null;
+            CloseCore(UIBrickState.Created, ref exception);
+            ProcessDestroyRequest(ref exception);
+            Throw(exception);
+        }
+
+        /// <summary>
+        /// 终止生命周期并解除绑定。此操作幂等，销毁后的实例不可再次创建。
+        /// GameObject 和预制体资源的所有权由 UI 管理器负责。
         /// </summary>
         public void Destroy()
         {
-            if (IsOpened)
+            if (State == UIBrickState.Destroyed || State == UIBrickState.Destroying) return;
+
+            if (!IsStableState())
             {
-                Close();
+                _destroyRequested = true;
+                return;
             }
 
-            if (IsCreated && !IsDestroyed)
-            {
-                OnDestroy();
-                IsCreated = false;
-                IsDestroyed = true;
-            }
-
-            if (Entity != null)
-            {
-                Entity.RemoveDestroyListener(OnEntityDestroyed);
-            }
-
-            OnUnbind();
-
-            Entity = null;
-            GameObject = null;
-            Transform = null;
+            DestroyCore();
         }
 
-        /// <summary>
-        /// 绑定完成后调用。子类可在此阶段缓存 UIEntity 生成的组件字段或初始化组件引用。
-        /// </summary>
         protected virtual void OnBind()
         {
         }
 
-        /// <summary>
-        /// 解除绑定前调用。子类可在此阶段清理与 UIEntity 相关的缓存引用。
-        /// </summary>
         protected virtual void OnUnbind()
         {
         }
 
-        // ── 生命周期（由 UI 框架或派生框架类调用） ──
-
-        /// <summary>
-        /// 打开。完成后注册事件，并调用子类的 OnOpen。
-        /// </summary>
-        /// <param name="args">打开时传入的参数</param>
-        public void Open(object args = null)
-        {
-            if (IsOpened || !IsCreated || IsDestroyed) return;
-
-            IsOpened = true;
-            RegisterEvents();
-            OnOpen(args);
-        }
-
-        /// <summary>
-        /// 显示。完成后调用子类的 OnShow。
-        /// </summary>
-        public void Show()
-        {
-            if (!IsOpened || IsVisible || IsDestroyed) return;
-
-            IsVisible = true;
-            OnShow();
-        }
-
-        /// <summary>
-        /// 隐藏。完成后调用子类的 OnHide。
-        /// </summary>
-        public void Hide()
-        {
-            if (!IsOpened || !IsVisible || IsDestroyed) return;
-
-            OnHide();
-            IsVisible = false;
-        }
-
-        /// <summary>
-        /// 关闭。完成后调用子类的 OnClose，并注销事件、重置打开与显示状态。
-        /// </summary>
-        public void Close()
-        {
-            if (!IsOpened || IsDestroyed) return;
-
-            if (IsVisible)
-            {
-                Hide();
-            }
-
-            OnClose();
-            UnregisterEvents();
-            IsOpened = false;
-        }
-
-        // ── 可重写生命周期 ──
-
-        /// <summary>
-        /// 创建时调用，用于初始化数据。在 Create 完成绑定后调用。
-        /// </summary>
         protected virtual void OnCreate()
         {
         }
 
-        /// <summary>
-        /// 打开时调用，接收外部传入的参数。
-        /// </summary>
-        /// <param name="args">打开时传入的参数</param>
-        protected virtual void OnOpen(object args)
+        protected virtual void OnOpen()
         {
         }
 
-        /// <summary>
-        /// 显示时调用。
-        /// </summary>
         protected virtual void OnShow()
         {
         }
 
-        /// <summary>
-        /// 隐藏时调用。
-        /// </summary>
         protected virtual void OnHide()
         {
         }
 
-        /// <summary>
-        /// 关闭时调用，用于清理打开期间的状态。
-        /// </summary>
+        protected virtual void OnPause()
+        {
+        }
+
+        protected virtual void OnResume()
+        {
+        }
+
         protected virtual void OnClose()
         {
         }
 
-        /// <summary>
-        /// 销毁时调用，用于释放生命周期内持有的资源。在 Destroy 时调用。
-        /// </summary>
         protected virtual void OnDestroy()
         {
         }
 
-        // ── 事件注册 / 反注册 ──
-
-        /// <summary>
-        /// 注册 UI 事件。在 Open 中 IsOpened 置为 true 之后、OnOpen 之前调用。
-        /// </summary>
         protected virtual void RegisterEvents()
         {
         }
 
-        /// <summary>
-        /// 注销 UI 事件。在 Close 中 OnClose 之后、IsOpened 置为 false 之前调用。
-        /// </summary>
         protected virtual void UnregisterEvents()
         {
         }
 
-        // ── 其他 ──
-
-        /// <summary>
-        /// 返回操作处理。例如按 ESC 或 Android 返回键时调用。
-        /// </summary>
-        /// <returns>true 表示已处理返回操作，false 表示未处理</returns>
+        /// <summary>处理 ESC 或 Android 返回键等返回操作。</summary>
         public virtual bool OnBack()
         {
             return false;
         }
 
+        private void CloseCore(UIBrickState completedState, ref Exception exception)
+        {
+            bool wasVisible = IsVisible;
+            State = UIBrickState.Closing;
+
+            if (wasVisible)
+            {
+                InvokeLifecycle(OnHide, ref exception);
+            }
+
+            IsVisible = false;
+            IsPaused = false;
+            InvokeLifecycle(OnClose, ref exception);
+            UnregisterRegisteredEvents(ref exception);
+            IsOpened = false;
+            State = completedState;
+        }
+
+        private void DestroyCore()
+        {
+            _destroyRequested = false;
+            Exception exception = null;
+            bool wasOpened = IsOpened;
+            State = UIBrickState.Destroying;
+
+            if (wasOpened)
+            {
+                CloseCore(UIBrickState.Destroying, ref exception);
+            }
+
+            if (IsCreated)
+            {
+                InvokeLifecycle(OnDestroy, ref exception);
+            }
+
+            if (IsBound)
+            {
+                Entity.RemoveDestroyListener(OnEntityDestroyed);
+                InvokeLifecycle(OnUnbind, ref exception);
+            }
+
+            ClearBinding();
+            IsCreated = false;
+            IsOpened = false;
+            IsVisible = false;
+            IsPaused = false;
+            State = UIBrickState.Destroyed;
+            Throw(exception);
+        }
+
+        private void RollbackCreate()
+        {
+            Exception ignored = null;
+
+            if (IsOpened)
+            {
+                CloseCore(UIBrickState.Creating, ref ignored);
+            }
+
+            if (IsCreated)
+            {
+                InvokeLifecycle(OnDestroy, ref ignored);
+            }
+
+            if (IsBound)
+            {
+                Entity.RemoveDestroyListener(OnEntityDestroyed);
+                InvokeLifecycle(OnUnbind, ref ignored);
+            }
+
+            ClearBinding();
+            IsCreated = false;
+            IsOpened = false;
+            IsVisible = false;
+            IsPaused = false;
+            State = UIBrickState.Uninitialized;
+        }
+
+        private void RollbackOpen(bool opened)
+        {
+            Exception ignored = null;
+            bool wasVisible = IsVisible;
+            State = UIBrickState.Closing;
+
+            if (wasVisible)
+            {
+                InvokeLifecycle(OnHide, ref ignored);
+            }
+
+            IsVisible = false;
+            IsPaused = false;
+            if (opened)
+            {
+                InvokeLifecycle(OnClose, ref ignored);
+            }
+            UnregisterRegisteredEvents(ref ignored);
+            IsOpened = false;
+            State = UIBrickState.Created;
+        }
+
+        private bool IsStableState()
+        {
+            return State == UIBrickState.Uninitialized ||
+                   State == UIBrickState.Created ||
+                   State == UIBrickState.Opened ||
+                   State == UIBrickState.Visible;
+        }
+
+        private void ProcessDestroyRequest()
+        {
+            if (_destroyRequested && IsStableState())
+            {
+                DestroyCore();
+            }
+        }
+
+        private void ProcessDestroyRequest(ref Exception exception)
+        {
+            if (!_destroyRequested || !IsStableState()) return;
+
+            try
+            {
+                DestroyCore();
+            }
+            catch (Exception destroyException)
+            {
+                Capture(destroyException, ref exception);
+            }
+        }
+
+        private void UnregisterRegisteredEvents(ref Exception exception)
+        {
+            if (!_eventsRegistered) return;
+
+            _eventsRegistered = false;
+            InvokeLifecycle(UnregisterEvents, ref exception);
+        }
+
+        private void ClearBinding()
+        {
+            Entity = null;
+            GameObject = null;
+            Transform = null;
+            _eventsRegistered = false;
+            _destroyRequested = false;
+        }
+
+        private static void InvokeLifecycle(Action action, ref Exception exception)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception lifecycleException)
+            {
+                Capture(lifecycleException, ref exception);
+            }
+        }
+
+        private static void InvokeCleanup(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        private static void Capture(Exception candidate, ref Exception exception)
+        {
+            if (exception == null)
+            {
+                exception = candidate;
+            }
+            else
+            {
+                Debug.LogException(candidate);
+            }
+        }
+
+        private static void Throw(Exception exception)
+        {
+            if (exception != null)
+            {
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
+        }
+
         private void OnEntityDestroyed()
         {
-            Destroy();
+            try
+            {
+                Destroy();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
         }
     }
 }
