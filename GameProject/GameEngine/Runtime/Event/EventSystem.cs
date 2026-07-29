@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GameEngine
@@ -13,6 +14,7 @@ namespace GameEngine
     /// </code>
     public static class EventSystem
     {
+        private static readonly HashSet<int> _keys = new HashSet<int>(1024);
         private static EventBus _default;
 
         /// <summary>全局默认 EventBus 实例。</summary>
@@ -29,10 +31,22 @@ namespace GameEngine
             }
         }
 
-        public static bool DebugMode
+        /// <summary>将事件名称转换为稳定的 int 类型 EventKey。</summary>
+        /// <exception cref="ArgumentNullException">事件名称为 null。</exception>
+        public static int StringToHash(string eventName)
         {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
+            if (eventName == null)
+            {
+                throw new ArgumentNullException(nameof(eventName));
+            }
+
+            int eventKey = eventName.GetHashCode();
+            while (!_keys.Add(eventKey))
+            {
+                eventKey++;
+            }
+
+            return eventKey;
         }
 
         public static void Subscribe(int eventKey, Action callback, bool once = false, GameObject boundObject = null)
