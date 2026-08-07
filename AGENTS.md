@@ -91,6 +91,12 @@ GameEngine --------> GameEngineEditor
 
 Coroutine、FSM、Scene 和 Timer 等系统需要由游戏主循环调用对应的 `Tick`，不能假设它们像 Unity `MonoBehaviour.Update` 一样自动运行。
 
+### 日志规范
+
+- 所有日志打印必须使用框架日志系统 `GameEngine.Log`（或通过 `Log.GetLogger` 获取的 `Logger`）。
+- 不要直接使用 `UnityEngine.Debug.Log`、`UnityEngine.Debug.LogWarning`、`UnityEngine.Debug.LogError`、`Console.WriteLine` 等接口打印业务或框架日志。
+- 根据语义选择 `Log.Debug`、`Log.Warning` 或 `Log.Error`；记录异常时应传入异常对象，保留堆栈信息。
+
 ## 构建
 
 从仓库根目录执行：
