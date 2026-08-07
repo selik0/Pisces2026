@@ -10,6 +10,6 @@ namespace GameEngine
     public abstract class UIView : UIBrick
     {
         /// <summary>UI 所属层级</summary>
-        public UILayer Layer { get; private set; }
+        public virtual UILayer Layer { get; } = UILayer.Window;
     }
 }

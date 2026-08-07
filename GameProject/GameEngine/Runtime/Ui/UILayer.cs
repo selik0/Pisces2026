@@ -15,8 +15,8 @@ namespace GameEngine
         /// <summary>全屏页面，打开后看不到下层界面，例如主界面</summary>
         Window = 2000,
 
-        /// <summary>局部功能面板</summary>
-        Page = 3000,
+        /// <summary>小提示弹窗/规则弹窗/简单功能面板</summary>
+        Hint = 3000,
 
         /// <summary>普通窗口，例如设置、邮件</summary>
         Popup = 4000,
