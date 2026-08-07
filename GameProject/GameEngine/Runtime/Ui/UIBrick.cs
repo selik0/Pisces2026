@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.ExceptionServices;
 using UnityEngine;
 
 namespace GameEngine
@@ -21,14 +20,16 @@ namespace GameEngine
     /// <summary>
     /// UI 逻辑块基类。
     /// 标准生命周期为 Create -> Open -> Show -> Hide -> Close -> Destroy。
-    /// 生命周期回调失败不会回滚；执行中的 Close 或 Destroy 会立即终止当前阶段并进入目标流程。
+    /// 生命周期回调失败不会回滚；生命周期方法仅在对应状态下执行。
     /// </summary>
     public abstract class UIBrick
     {
         private bool _eventsRegistered;
+        private bool _hasBinding;
+        private bool _pendingEntityDestroy;
 
         /// <summary>UI 预制体路径。</summary>
-        public string PrefabPath { get; protected set; }
+        public virtual string PrefabPath { get; }
 
         /// <summary>绑定的 UIEntity。</summary>
         public UIEntity Entity { get; private set; }
@@ -53,37 +54,43 @@ namespace GameEngine
         {
             if (entity == null)
             {
-                Debug.LogError($"[UIBrick] Create failed: entity is null for {GetType().Name}.");
+                Log.Error($"[UIBrick] Create failed: entity is null for {GetType().Name}.");
                 return;
             }
 
             if (State != UIBrickState.Uninitialized)
             {
-                Debug.LogWarning($"[UIBrick] {GetType().Name} cannot be created from state {State}.");
+                Log.Warning($"[UIBrick] {GetType().Name} cannot be created from state {State}.");
                 return;
             }
 
-            Exception exception = null;
             State = UIBrickState.Loading;
             Entity = entity;
             GameObject = entity.gameObject;
             Transform = entity.transform;
+            _hasBinding = true;
             Entity.AddDestroyListener(OnEntityDestroyed);
 
-            InvokeLifecycle(OnBind, ref exception);
-            if (State != UIBrickState.Loading)
+            try
             {
-                Throw(exception);
-                return;
+                OnBind();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnBind failed.", exception);
             }
 
-            InvokeLifecycle(OnCreate, ref exception);
-            if (State == UIBrickState.Loading)
+            try
             {
-                State = UIBrickState.Created;
+                OnCreate();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnCreate failed.", exception);
             }
 
-            Throw(exception);
+            State = UIBrickState.Created;
+            ProcessPendingEntityDestroy();
         }
 
         /// <summary>
@@ -93,77 +100,107 @@ namespace GameEngine
         {
             if (State == UIBrickState.Opened)
             {
-                Show();
                 return;
             }
 
-            if (!IsBound || (State != UIBrickState.Created && State != UIBrickState.Closed))
+            if (State != UIBrickState.Created)
             {
+                Log.Error($"[UIBrick] {GetType().Name} cannot be opened from state {State}.");
                 return;
             }
 
-            Exception exception = null;
             State = UIBrickState.Opening;
             _eventsRegistered = true;
-            InvokeLifecycle(RegisterEvents, ref exception);
-
-            if (State == UIBrickState.Opening)
+            try
             {
-                InvokeLifecycle(OnOpen, ref exception);
+                RegisterEvents();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.RegisterEvents failed.", exception);
             }
 
-            if (State == UIBrickState.Opening)
+            try
             {
-                State = UIBrickState.Opened;
-                Show(ref exception);
+                OnOpen();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnOpen failed.", exception);
             }
 
-            Throw(exception);
+            Show();
         }
 
         /// <summary>显示已打开的 UI。</summary>
         public void Show()
         {
-            Exception exception = null;
-            Show(ref exception);
-            Throw(exception);
+            if (State != UIBrickState.Opening && State != UIBrickState.Hiding)
+            {
+                Log.Error($"[UIBrick] {GetType().Name} cannot be shown from state {State}.");
+                return;
+            }
+
+            IsVisible = true;
+            if (GameObject != null)
+            {
+                GameObject.SetActive(true);
+            }
+
+            try
+            {
+                OnShow();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnShow failed.", exception);
+            }
+
+            State = UIBrickState.Opened;
+            ProcessPendingEntityDestroy();
         }
 
         /// <summary>隐藏 UI，但保留本次打开的数据和事件订阅。</summary>
         public void Hide()
         {
-            if (State != UIBrickState.Opened || !IsVisible)
+            if (State != UIBrickState.Opened)
             {
+                Log.Error($"[UIBrick] {GetType().Name} cannot be hidden from state {State}.");
                 return;
             }
 
-            Exception exception = null;
             State = UIBrickState.Hiding;
-            InvokeLifecycle(OnHide, ref exception);
-
-            if (State == UIBrickState.Hiding)
+            try
             {
-                IsVisible = false;
-                State = UIBrickState.Opened;
+                OnHide();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnHide failed.", exception);
             }
 
-            Throw(exception);
+            IsVisible = false;
+            if (GameObject != null)
+            {
+                GameObject.SetActive(false);
+            }
         }
 
-        /// <summary>关闭 UI。执行中调用时会立即终止当前阶段并进入关闭流程。</summary>
+        /// <summary>关闭已打开或正在隐藏的 UI。</summary>
         public void Close()
         {
-            if (State == UIBrickState.Uninitialized ||
-                State == UIBrickState.Closing ||
-                State == UIBrickState.Closed ||
-                State == UIBrickState.Destroyed)
+            if (State != UIBrickState.Opened && State != UIBrickState.Hiding)
             {
+                Log.Error($"[UIBrick] {GetType().Name} cannot be closed from state {State}.");
                 return;
             }
 
-            Exception exception = null;
-            CloseCore(ref exception);
-            Throw(exception);
+            if (State == UIBrickState.Opened)
+            {
+                Hide();
+            }
+
+            CloseCore();
         }
 
         /// <summary>
@@ -177,38 +214,64 @@ namespace GameEngine
                 return;
             }
 
-            Exception exception = null;
-
-            if (State != UIBrickState.Uninitialized &&
-                State != UIBrickState.Closing &&
+            if (State != UIBrickState.Created &&
+                State != UIBrickState.Opened &&
                 State != UIBrickState.Closed)
             {
-                CloseCore(ref exception);
-            }
-
-            if (State == UIBrickState.Destroyed)
-            {
-                Throw(exception);
+                Log.Error($"[UIBrick] {GetType().Name} cannot be destroyed from state {State}.");
                 return;
             }
 
-            bool wasBound = IsBound;
-            State = UIBrickState.Destroyed;
-
-            if (wasBound)
+            if (State == UIBrickState.Opened)
             {
-                InvokeLifecycle(OnDestroy, ref exception);
+                Hide();
+                CloseCore();
+
+                if (State == UIBrickState.Destroyed)
+                {
+                    return;
+                }
             }
 
-            if (wasBound)
+            DestroyCore();
+        }
+
+        private void DestroyCore()
+        {
+            State = UIBrickState.Destroyed;
+            _pendingEntityDestroy = false;
+            UnregisterRegisteredEvents();
+
+            if (_hasBinding)
             {
-                Entity.RemoveDestroyListener(OnEntityDestroyed);
-                InvokeLifecycle(OnUnbind, ref exception);
+                try
+                {
+                    OnDestroy();
+                }
+                catch (Exception exception)
+                {
+                    Log.Error($"[UIBrick] {GetType().Name}.OnDestroy failed.", exception);
+                }
+            }
+
+            if (_hasBinding)
+            {
+                if (Entity != null)
+                {
+                    Entity.RemoveDestroyListener(OnEntityDestroyed);
+                }
+
+                try
+                {
+                    OnUnbind();
+                }
+                catch (Exception exception)
+                {
+                    Log.Error($"[UIBrick] {GetType().Name}.OnUnbind failed.", exception);
+                }
             }
 
             ClearBinding();
-            IsVisible = false;
-            Throw(exception);
         }
 
         protected virtual void OnBind()
@@ -257,49 +320,25 @@ namespace GameEngine
             return false;
         }
 
-        private void Show(ref Exception exception)
+        private void CloseCore()
         {
-            if (State != UIBrickState.Opened || IsVisible)
-            {
-                return;
-            }
-
-            IsVisible = true;
-            InvokeLifecycle(OnShow, ref exception);
-        }
-
-        private void CloseCore(ref Exception exception)
-        {
-            bool isHiding = State == UIBrickState.Hiding;
             State = UIBrickState.Closing;
-
-            if (IsVisible && !isHiding)
+            try
             {
-                InvokeLifecycle(OnHide, ref exception);
+                OnClose();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnClose failed.", exception);
             }
 
-            if (State == UIBrickState.Destroyed)
-            {
-                return;
-            }
+            UnregisterRegisteredEvents();
 
-            IsVisible = false;
-            InvokeLifecycle(OnClose, ref exception);
-
-            if (State == UIBrickState.Destroyed)
-            {
-                return;
-            }
-
-            UnregisterRegisteredEvents(ref exception);
-
-            if (State == UIBrickState.Closing)
-            {
-                State = UIBrickState.Closed;
-            }
+            State = UIBrickState.Closed;
+            ProcessPendingEntityDestroy();
         }
 
-        private void UnregisterRegisteredEvents(ref Exception exception)
+        private void UnregisterRegisteredEvents()
         {
             if (!_eventsRegistered)
             {
@@ -307,7 +346,14 @@ namespace GameEngine
             }
 
             _eventsRegistered = false;
-            InvokeLifecycle(UnregisterEvents, ref exception);
+            try
+            {
+                UnregisterEvents();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.UnregisterEvents failed.", exception);
+            }
         }
 
         private void ClearBinding()
@@ -316,50 +362,37 @@ namespace GameEngine
             GameObject = null;
             Transform = null;
             _eventsRegistered = false;
-        }
-
-        private static void InvokeLifecycle(Action action, ref Exception exception)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception lifecycleException)
-            {
-                Capture(lifecycleException, ref exception);
-            }
-        }
-
-        private static void Capture(Exception candidate, ref Exception exception)
-        {
-            if (exception == null)
-            {
-                exception = candidate;
-            }
-            else
-            {
-                Debug.LogException(candidate);
-            }
-        }
-
-        private static void Throw(Exception exception)
-        {
-            if (exception != null)
-            {
-                ExceptionDispatchInfo.Capture(exception).Throw();
-            }
+            _hasBinding = false;
         }
 
         private void OnEntityDestroyed()
         {
-            try
+            _pendingEntityDestroy = true;
+            ProcessPendingEntityDestroy();
+        }
+
+        private void ProcessPendingEntityDestroy()
+        {
+            if (!_pendingEntityDestroy ||
+                (State != UIBrickState.Created &&
+                 State != UIBrickState.Opened &&
+                 State != UIBrickState.Closed))
             {
-                Destroy();
+                return;
             }
-            catch (Exception exception)
+
+            if (State == UIBrickState.Opened)
             {
-                Debug.LogException(exception);
+                Hide();
+                CloseCore();
+
+                if (State == UIBrickState.Destroyed)
+                {
+                    return;
+                }
             }
+
+            DestroyCore();
         }
     }
 }
