@@ -175,6 +175,7 @@ namespace GameEngine
             {
                 GameObject.SetActive(false);
             }
+            ProcessPendingEntityDestroy();
         }
 
         /// <summary>关闭已创建、已打开或正在隐藏的 UI。</summary>
@@ -272,12 +273,13 @@ namespace GameEngine
             if (!_pendingEntityDestroy ||
                 (State != UIBrickState.Created &&
                  State != UIBrickState.Opened &&
+                 State != UIBrickState.Hiding &&
                  State != UIBrickState.Closed))
             {
                 return;
             }
 
-            if (State == UIBrickState.Created || State == UIBrickState.Opened)
+            if (State == UIBrickState.Created || State == UIBrickState.Opened || State == UIBrickState.Hiding)
             {
                 Close();
                 return;
