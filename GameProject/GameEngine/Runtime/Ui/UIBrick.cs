@@ -19,13 +19,11 @@ namespace GameEngine
 
     /// <summary>
     /// UI 逻辑块基类。
-    /// 标准生命周期为 Create -> Open -> Show -> Hide -> Close -> Destroy。
+    /// 标准生命周期为 Create -> Open -> Show -> Hide -> Close，实体销毁后执行 OnDestroy。
     /// 生命周期回调失败不会回滚；生命周期方法仅在对应状态下执行。
     /// </summary>
     public abstract class UIBrick
     {
-        private bool _eventsRegistered;
-        private bool _hasBinding;
         private bool _pendingEntityDestroy;
 
         /// <summary>UI 预制体路径。</summary>
@@ -68,7 +66,6 @@ namespace GameEngine
             Entity = entity;
             GameObject = entity.gameObject;
             Transform = entity.transform;
-            _hasBinding = true;
             Entity.AddDestroyListener(OnEntityDestroyed);
 
             try
@@ -89,28 +86,6 @@ namespace GameEngine
                 Log.Error($"[UIBrick] {GetType().Name}.OnCreate failed.", exception);
             }
 
-            State = UIBrickState.Created;
-            ProcessPendingEntityDestroy();
-        }
-
-        /// <summary>
-        /// 打开 UI。注册事件并执行 OnOpen 后自动进入显示阶段。
-        /// </summary>
-        public void Open()
-        {
-            if (State == UIBrickState.Opened)
-            {
-                return;
-            }
-
-            if (State != UIBrickState.Created)
-            {
-                Log.Error($"[UIBrick] {GetType().Name} cannot be opened from state {State}.");
-                return;
-            }
-
-            State = UIBrickState.Opening;
-            _eventsRegistered = true;
             try
             {
                 RegisterEvents();
@@ -120,6 +95,22 @@ namespace GameEngine
                 Log.Error($"[UIBrick] {GetType().Name}.RegisterEvents failed.", exception);
             }
 
+            State = UIBrickState.Created;
+            ProcessPendingEntityDestroy();
+        }
+
+        /// <summary>
+        /// 打开已创建的 UI。
+        /// </summary>
+        public void Open()
+        {
+            if (State != UIBrickState.Created)
+            {
+                Log.Error($"[UIBrick] {GetType().Name} cannot be opened from state {State}.");
+                return;
+            }
+
+            State = UIBrickState.Opening;
             try
             {
                 OnOpen();
@@ -186,10 +177,12 @@ namespace GameEngine
             }
         }
 
-        /// <summary>关闭已打开或正在隐藏的 UI。</summary>
+        /// <summary>关闭已创建、已打开或正在隐藏的 UI。</summary>
         public void Close()
         {
-            if (State != UIBrickState.Opened && State != UIBrickState.Hiding)
+            if (State != UIBrickState.Created &&
+                State != UIBrickState.Opened &&
+                State != UIBrickState.Hiding)
             {
                 Log.Error($"[UIBrick] {GetType().Name} cannot be closed from state {State}.");
                 return;
@@ -199,79 +192,27 @@ namespace GameEngine
             {
                 Hide();
             }
-
-            CloseCore();
-        }
-
-        /// <summary>
-        /// 终止生命周期并解除绑定。此操作幂等，销毁后的实例不可再次创建。
-        /// GameObject 和预制体资源的所有权由 UI 管理器负责。
-        /// </summary>
-        public void Destroy()
-        {
-            if (State == UIBrickState.Destroyed)
+            State = UIBrickState.Closing;
+            try
             {
-                return;
+                UnregisterEvents();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.UnregisterEvents failed.", exception);
             }
 
-            if (State != UIBrickState.Created &&
-                State != UIBrickState.Opened &&
-                State != UIBrickState.Closed)
+            try
             {
-                Log.Error($"[UIBrick] {GetType().Name} cannot be destroyed from state {State}.");
-                return;
+                OnClose();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnClose failed.", exception);
             }
 
-            if (State == UIBrickState.Opened)
-            {
-                Hide();
-                CloseCore();
-
-                if (State == UIBrickState.Destroyed)
-                {
-                    return;
-                }
-            }
-
-            DestroyCore();
-        }
-
-        private void DestroyCore()
-        {
-            State = UIBrickState.Destroyed;
-            _pendingEntityDestroy = false;
-            UnregisterRegisteredEvents();
-
-            if (_hasBinding)
-            {
-                try
-                {
-                    OnDestroy();
-                }
-                catch (Exception exception)
-                {
-                    Log.Error($"[UIBrick] {GetType().Name}.OnDestroy failed.", exception);
-                }
-            }
-
-            if (_hasBinding)
-            {
-                if (Entity != null)
-                {
-                    Entity.RemoveDestroyListener(OnEntityDestroyed);
-                }
-
-                try
-                {
-                    OnUnbind();
-                }
-                catch (Exception exception)
-                {
-                    Log.Error($"[UIBrick] {GetType().Name}.OnUnbind failed.", exception);
-                }
-            }
-
-            ClearBinding();
+            State = UIBrickState.Closed;
+            ProcessPendingEntityDestroy();
         }
 
         protected virtual void OnBind()
@@ -320,51 +261,6 @@ namespace GameEngine
             return false;
         }
 
-        private void CloseCore()
-        {
-            State = UIBrickState.Closing;
-            try
-            {
-                OnClose();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnClose failed.", exception);
-            }
-
-            UnregisterRegisteredEvents();
-
-            State = UIBrickState.Closed;
-            ProcessPendingEntityDestroy();
-        }
-
-        private void UnregisterRegisteredEvents()
-        {
-            if (!_eventsRegistered)
-            {
-                return;
-            }
-
-            _eventsRegistered = false;
-            try
-            {
-                UnregisterEvents();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.UnregisterEvents failed.", exception);
-            }
-        }
-
-        private void ClearBinding()
-        {
-            Entity = null;
-            GameObject = null;
-            Transform = null;
-            _eventsRegistered = false;
-            _hasBinding = false;
-        }
-
         private void OnEntityDestroyed()
         {
             _pendingEntityDestroy = true;
@@ -381,18 +277,49 @@ namespace GameEngine
                 return;
             }
 
-            if (State == UIBrickState.Opened)
+            if (State == UIBrickState.Created || State == UIBrickState.Opened)
             {
-                Hide();
-                CloseCore();
-
-                if (State == UIBrickState.Destroyed)
-                {
-                    return;
-                }
+                Close();
+                return;
             }
 
             DestroyCore();
+        }
+
+        private void DestroyCore()
+        {
+            State = UIBrickState.Destroyed;
+
+            try
+            {
+                OnUnbind();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnUnbind failed.", exception);
+            }
+
+            try
+            {
+                OnDestroy();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.OnDestroy failed.", exception);
+            }
+
+            ClearBinding();
+        }
+
+        private void ClearBinding()
+        {
+            if (Entity != null)
+            {
+                Entity.RemoveDestroyListener(OnEntityDestroyed);
+            }
+            Entity = null;
+            GameObject = null;
+            Transform = null;
         }
     }
 }
