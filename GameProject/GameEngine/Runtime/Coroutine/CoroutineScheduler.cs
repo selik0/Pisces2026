@@ -37,9 +37,6 @@ namespace GameEngine
         private readonly List<CoroutineEntry> _toAdd      = new List<CoroutineEntry>();
         private bool _isTicking;
 
-        /// <summary>是否开启 Debug 日志</summary>
-        public bool DebugMode { get; set; }
-
         /// <summary>当前正在运行的协程数量</summary>
         public int Count => _coroutines.Count + _toAdd.Count;
 
@@ -76,10 +73,7 @@ namespace GameEngine
                 _coroutines.Add(entry);
             }
 
-            if (DebugMode)
-            {
-                Log.Debug($"[Coroutine] Start  #{handle.Id}");
-            }
+            Log.Debug($"[Coroutine] Start  #{handle.Id}");
 
             return handle;
         }
@@ -96,10 +90,7 @@ namespace GameEngine
 
             handle.Stop();
 
-            if (DebugMode)
-            {
-                Log.Debug($"[Coroutine] Stop  #{handle.Id}");
-            }
+            Log.Debug($"[Coroutine] Stop  #{handle.Id}");
         }
 
         /// <summary>停止所有协程。</summary>
@@ -118,10 +109,7 @@ namespace GameEngine
             _coroutines.Clear();
             _toAdd.Clear();
 
-            if (DebugMode)
-            {
-                Log.Debug("[Coroutine] StopAll");
-            }
+            Log.Debug("[Coroutine] StopAll");
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
@@ -150,10 +138,7 @@ namespace GameEngine
                     entry.Handle.IsDone = true;
                     _coroutines.RemoveAt(i);
 
-                    if (DebugMode)
-                    {
-                        Log.Debug($"[Coroutine] Completed  #{entry.Handle.Id}");
-                    }
+                    Log.Debug($"[Coroutine] Completed  #{entry.Handle.Id}");
                 }
             }
 
@@ -255,10 +240,7 @@ namespace GameEngine
                 }
 
                 // 未知对象，直接跳过（等下一帧）
-                if (DebugMode)
-                {
-                    Log.Debug($"[Coroutine] Unknown yield object '{current.GetType().Name}' in #{entry.Handle.Id}, treated as next frame");
-                }
+                Log.Debug($"[Coroutine] Unknown yield object '{current.GetType().Name}' in #{entry.Handle.Id}, treated as next frame");
 
                 entry.WaitNextFrame = true;
                 return true;

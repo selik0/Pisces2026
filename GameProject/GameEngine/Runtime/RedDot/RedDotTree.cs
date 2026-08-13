@@ -44,9 +44,6 @@ namespace GameEngine
         private readonly Dictionary<string, RedDotNode> _nodeCache
             = new Dictionary<string, RedDotNode>(StringComparer.Ordinal);
 
-        /// <summary>是否开启 Debug 日志</summary>
-        public bool DebugMode { get; set; }
-
         // ── 节点访问 ─────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -96,10 +93,7 @@ namespace GameEngine
         public void SetCount(string path, int count)
         {
             var node = GetNode(path);
-            if (DebugMode)
-            {
-                Log.Debug($"[RedDotTree] SetCount  '{path}'  {node.SelfCount} → {count}");
-            }
+            Log.Debug($"[RedDotTree] SetCount  '{path}'  {node.SelfCount} → {count}");
 
             node.SelfCount = count;
         }
@@ -113,10 +107,7 @@ namespace GameEngine
         {
             var node = GetNode(path);
             var newVal = node.SelfCount + delta;
-            if (DebugMode)
-            {
-                Log.Debug($"[RedDotTree] AddCount  '{path}'  delta={delta}  {node.SelfCount} → {newVal}");
-            }
+            Log.Debug($"[RedDotTree] AddCount  '{path}'  delta={delta}  {node.SelfCount} → {newVal}");
 
             node.SelfCount = newVal;
         }
@@ -182,10 +173,7 @@ namespace GameEngine
             // 清理根节点下所有子节点（让 GC 回收）
             // RedDotNode 不暴露 RemoveChild，通过创建新 root 实现完全重置
             // 直接清空缓存即可，旧节点失去引用后 GC 会回收
-            if (DebugMode)
-            {
-                Log.Debug("[RedDotTree] Reset");
-            }
+            Log.Debug("[RedDotTree] Reset");
         }
 
         // ── 调试辅助 ─────────────────────────────────────────────────────────────
@@ -240,10 +228,7 @@ namespace GameEngine
                     child = current.GetOrCreateChild(seg);
                     _nodeCache[segPath] = child;
 
-                    if (DebugMode)
-                    {
-                        Log.Debug($"[RedDotTree] Created node '{segPath}'");
-                    }
+                    Log.Debug($"[RedDotTree] Created node '{segPath}'");
                 }
                 current = child;
             }

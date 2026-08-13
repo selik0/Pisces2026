@@ -35,9 +35,6 @@ namespace GameEngine
     ///
     /// // ── 注销场景 ──────────────────────────────────────────────
     /// SceneSystem.Unregister("LoadingScene");
-    ///
-    /// // ── Debug 模式 ────────────────────────────────────────────
-    /// SceneSystem.DebugMode = true;
     /// </code>
     /// </summary>
     public static class SceneSystem
@@ -56,13 +53,6 @@ namespace GameEngine
 
                 return _default;
             }
-        }
-
-        /// <summary>是否开启 Debug 模式（透传给 Default manager）</summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
         }
 
         /// <summary>当前激活的场景，未切换前为 null</summary>

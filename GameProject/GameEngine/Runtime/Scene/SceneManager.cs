@@ -32,9 +32,6 @@ namespace GameEngine
         /// <summary>已注册的场景数量</summary>
         public int Count => _scenes.Count;
 
-        /// <summary>是否开启 Debug 日志</summary>
-        public bool DebugMode { get; set; }
-
         // ── 注册 / 注销 ──────────────────────────────────────────────────────────
 
         /// <summary>
@@ -63,10 +60,7 @@ namespace GameEngine
 
             _scenes[scene.Name] = scene;
 
-            if (DebugMode)
-            {
-                Log.Debug($"[SceneManager] 注册场景  name={scene.Name}");
-            }
+            Log.Debug($"[SceneManager] 注册场景  name={scene.Name}");
         }
 
         /// <summary>
@@ -91,10 +85,7 @@ namespace GameEngine
             scene.OnDestroy();
             _scenes.Remove(name);
 
-            if (DebugMode)
-            {
-                Log.Debug($"[SceneManager] 注销场景  name={name}");
-            }
+            Log.Debug($"[SceneManager] 注销场景  name={name}");
         }
 
         // ── 查询 ─────────────────────────────────────────────────────────────────
@@ -151,10 +142,7 @@ namespace GameEngine
                 return;
             }
 
-            if (DebugMode)
-            {
-                Log.Debug($"[SceneManager] 切换场景  '{CurrentSceneName ?? "null"}' → '{name}'");
-            }
+            Log.Debug($"[SceneManager] 切换场景  '{CurrentSceneName ?? "null"}' → '{name}'");
 
             // 退出当前场景
             ExitCurrentScene();
@@ -164,10 +152,7 @@ namespace GameEngine
             SetSceneActive(next, true);
             next.OnEnter(args);
 
-            if (DebugMode)
-            {
-                Log.Debug($"[SceneManager] 场景切换完成  current='{name}'");
-            }
+            Log.Debug($"[SceneManager] 场景切换完成  current='{name}'");
         }
 
         /// <summary>
@@ -218,10 +203,7 @@ namespace GameEngine
 
             _scenes.Clear();
 
-            if (DebugMode)
-            {
-                Log.Debug("[SceneManager] 已销毁所有场景");
-            }
+            Log.Debug("[SceneManager] 已销毁所有场景");
         }
 
         // ── 内部辅助 ─────────────────────────────────────────────────────────────

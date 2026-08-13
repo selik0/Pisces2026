@@ -18,9 +18,6 @@ namespace GameEngine
         /// <summary>当前管理的有限状态机数量</summary>
         public int Count => _fsms.Count;
 
-        /// <summary>是否开启 Debug 日志</summary>
-        public bool DebugMode { get; set; }
-
         // ── Create ───────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -43,10 +40,7 @@ namespace GameEngine
             var fsm = Fsm<T>.Create(name, owner, states);
             _fsms[key] = new FsmWrapper<T>(fsm);
 
-            if (DebugMode)
-            {
-                Log.Debug($"[FsmManager] 创建 FSM  key={key}  states={states.Length}");
-            }
+            Log.Debug($"[FsmManager] 创建 FSM  key={key}  states={states.Length}");
 
             return fsm;
         }
@@ -83,10 +77,7 @@ namespace GameEngine
             wrapper.Destroy();
             _fsms.Remove(key);
 
-            if (DebugMode)
-            {
-                Log.Debug($"[FsmManager] 销毁 FSM  key={key}");
-            }
+            Log.Debug($"[FsmManager] 销毁 FSM  key={key}");
         }
 
         // ── HasFsm ───────────────────────────────────────────────────────────────
@@ -139,10 +130,7 @@ namespace GameEngine
 
             _fsms.Clear();
 
-            if (DebugMode)
-            {
-                Log.Debug("[FsmManager] 已销毁所有 FSM");
-            }
+            Log.Debug("[FsmManager] 已销毁所有 FSM");
         }
 
         // ── 内部辅助 ─────────────────────────────────────────────────────────────

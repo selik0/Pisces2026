@@ -55,9 +55,6 @@ namespace GameEngine
     /// // ── 停止协程 ──────────────────────────────────────────
     /// var handle = CoroutineSystem.Start(MyRoutine());
     /// handle.Stop();
-    ///
-    /// // ── Debug 模式 ────────────────────────────────────────
-    /// CoroutineSystem.DebugMode = true;
     /// </code>
     /// </summary>
     public static class CoroutineSystem
@@ -76,13 +73,6 @@ namespace GameEngine
 
                 return _default;
             }
-        }
-
-        /// <summary>是否开启 Debug 模式（透传给 Default scheduler）</summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────

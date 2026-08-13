@@ -37,9 +37,6 @@ namespace GameEngine
         private Transform _uiRoot;
         private bool _initialized;
 
-        /// <summary>是否开启 Debug 日志。</summary>
-        public bool DebugMode { get; set; }
-
         /// <summary>跳转深度上限。达到上限后跳转仍会执行，但会触发 <see cref="OnJumpDepthLimitReached"/>。</summary>
         public int MaxJumpDepth { get; set; } = 2;
 
@@ -92,10 +89,7 @@ namespace GameEngine
             _uiRoot = uiRoot;
             _initialized = true;
 
-            if (DebugMode)
-            {
-                Log.Debug("[UIManager] 初始化完成。");
-            }
+            Log.Debug("[UIManager] 初始化完成。");
         }
 
         // ── 注册 ────────────────────────────────────────────────────────────────
@@ -437,10 +431,7 @@ namespace GameEngine
 
             RefreshLayers();
 
-            if (DebugMode)
-            {
-                Log.Debug($"[UIManager] 打开界面 type={viewType.Name} layer={view.Layer} jump={isJump}");
-            }
+            Log.Debug($"[UIManager] 打开界面 type={viewType.Name} layer={view.Layer} jump={isJump}");
 
             return view;
         }

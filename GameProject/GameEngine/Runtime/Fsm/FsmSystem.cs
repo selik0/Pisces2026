@@ -29,9 +29,6 @@ namespace GameEngine
     ///
     /// // ── 销毁 FSM ──────────────────────────────────────────────
     /// FsmSystem.DestroyFsm&lt;GameApp&gt;("GameProcedure");
-    ///
-    /// // ── Debug 模式 ────────────────────────────────────────────
-    /// FsmSystem.DebugMode = true;
     /// </code>
     /// </summary>
     public static class FsmSystem
@@ -50,13 +47,6 @@ namespace GameEngine
 
                 return _default;
             }
-        }
-
-        /// <summary>是否开启 Debug 模式（透传给 Default manager）</summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
         }
 
         /// <summary>当前管理的有限状态机数量</summary>

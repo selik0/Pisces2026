@@ -35,9 +35,6 @@ namespace GameEngine
     /// //     public void OnRedDotChanged(RedDotNode node, int newCount) { ... }
     /// // }
     /// RedDotSystem.GetNode("Main/Mail").AddObserver(mailUI);
-    ///
-    /// // ── Debug 模式 ────────────────────────────────
-    /// RedDotSystem.DebugMode = true;
     /// </code>
     /// </summary>
     public static class RedDotSystem
@@ -56,16 +53,6 @@ namespace GameEngine
 
                 return _default;
             }
-        }
-
-        /// <summary>
-        /// 是否开启 Debug 模式（透传给 Default tree）。
-        /// 开启后，节点创建、计数变更均会打印调用日志。
-        /// </summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
         }
 
         // ── 节点访问 ─────────────────────────────────────────────────────────────

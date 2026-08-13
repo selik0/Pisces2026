@@ -59,13 +59,6 @@ namespace GameEngine
             }
         }
 
-        /// <summary>是否开启 Debug 模式（透传给 Default manager）</summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
-        }
-
         /// <summary>跳转深度上限，默认 2。</summary>
         public static int MaxJumpDepth
         {

@@ -39,9 +39,6 @@ namespace GameEngine
         private readonly List<TimerEntry> _toAdd     = new List<TimerEntry>(); // 帧内缓冲新增
         private bool _isTicking;
 
-        /// <summary>是否开启 Debug 日志</summary>
-        public bool DebugMode { get; set; }
-
         /// <summary>当前正在管理的定时器数量（包含本帧新增、不含已完成）</summary>
         public int Count => _timers.Count + _toAdd.Count;
 
@@ -97,10 +94,7 @@ namespace GameEngine
                 _timers.Add(entry);
             }
 
-            if (DebugMode)
-            {
-                Log.Debug($"[Timer] Schedule  #{handle.Id}  delay={delay:F3}s  repeat={repeat}  interval={actualInterval:F3}s  maxRepeat={maxRepeat}");
-            }
+            Log.Debug($"[Timer] Schedule  #{handle.Id}  delay={delay:F3}s  repeat={repeat}  interval={actualInterval:F3}s  maxRepeat={maxRepeat}");
 
             return handle;
         }
@@ -119,10 +113,7 @@ namespace GameEngine
 
             handle.Cancel();   // 标记为已完成，Tick 时会自动清理
 
-            if (DebugMode)
-            {
-                Log.Debug($"[Timer] Cancel  #{handle.Id}");
-            }
+            Log.Debug($"[Timer] Cancel  #{handle.Id}");
         }
 
         /// <summary>
@@ -143,10 +134,7 @@ namespace GameEngine
             _timers.Clear();
             _toAdd.Clear();
 
-            if (DebugMode)
-            {
-                Log.Debug("[Timer] CancelAll");
-            }
+            Log.Debug("[Timer] CancelAll");
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
@@ -183,10 +171,7 @@ namespace GameEngine
                     entry.Callback();
                     entry.RepeatCount++;
 
-                    if (DebugMode)
-                    {
-                        Log.Debug($"[Timer] Fired  #{entry.Handle.Id}  repeatCount={entry.RepeatCount}");
-                    }
+                    Log.Debug($"[Timer] Fired  #{entry.Handle.Id}  repeatCount={entry.RepeatCount}");
                 }
                 catch (Exception ex)
                 {

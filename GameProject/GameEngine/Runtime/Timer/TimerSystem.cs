@@ -25,9 +25,6 @@ namespace GameEngine
     /// // ── 取消 ──────────────────────────────────────────────
     /// h.Cancel();                 // 通过句柄取消
     /// TimerSystem.Cancel(h);      // 通过系统取消（等价）
-    ///
-    /// // ── Debug 模式 ────────────────────────────────────────
-    /// TimerSystem.DebugMode = true;
     /// </code>
     /// </summary>
     public static class TimerSystem
@@ -46,13 +43,6 @@ namespace GameEngine
 
                 return _default;
             }
-        }
-
-        /// <summary>是否开启 Debug 模式（透传给 Default scheduler）</summary>
-        public static bool DebugMode
-        {
-            get => Default.DebugMode;
-            set => Default.DebugMode = value;
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
