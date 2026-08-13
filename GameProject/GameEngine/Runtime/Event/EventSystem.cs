@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace GameEngine
 {
@@ -14,7 +12,6 @@ namespace GameEngine
     /// </code>
     public static class EventSystem
     {
-        private static readonly HashSet<int> _keys = new HashSet<int>(1024);
         private static EventBus _default;
 
         /// <summary>全局默认 EventBus 实例。</summary>
@@ -31,42 +28,24 @@ namespace GameEngine
             }
         }
 
-        /// <summary>将事件名称转换为稳定的 int 类型 EventKey。</summary>
-        /// <exception cref="ArgumentNullException">事件名称为 null。</exception>
-        public static int StringToHash(string eventName)
+        public static void Subscribe(int eventKey, Action callback)
         {
-            if (eventName == null)
-            {
-                throw new ArgumentNullException(nameof(eventName));
-            }
-
-            int eventKey = eventName.GetHashCode();
-            while (!_keys.Add(eventKey))
-            {
-                eventKey++;
-            }
-
-            return eventKey;
+            Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe(int eventKey, Action callback, bool once = false, GameObject boundObject = null)
+        public static void Subscribe<T1>(int eventKey, Action<T1> callback)
         {
-            Default.Subscribe(eventKey, callback, once, boundObject);
+            Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe<T1>(int eventKey, Action<T1> callback, bool once = false, GameObject boundObject = null)
+        public static void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
         {
-            Default.Subscribe(eventKey, callback, once, boundObject);
+            Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback, bool once = false, GameObject boundObject = null)
+        public static void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
-            Default.Subscribe(eventKey, callback, once, boundObject);
-        }
-
-        public static void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback, bool once = false, GameObject boundObject = null)
-        {
-            Default.Subscribe(eventKey, callback, once, boundObject);
+            Default.Subscribe(eventKey, callback);
         }
 
         public static void Unsubscribe(int eventKey, Action callback)
@@ -87,11 +66,6 @@ namespace GameEngine
         public static void Unsubscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
             Default.Unsubscribe(eventKey, callback);
-        }
-
-        public static void UnsubscribeAll(GameObject boundObject)
-        {
-            Default.UnsubscribeAll(boundObject);
         }
 
         public static void Emit(int eventKey)
