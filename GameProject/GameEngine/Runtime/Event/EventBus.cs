@@ -10,169 +10,86 @@ namespace GameEngine
     /// <remarks>非线程安全，应仅在 Unity 主线程使用。</remarks>
     public sealed class EventBus
     {
-        private readonly Dictionary<int, Delegate> _bindings = new Dictionary<int, Delegate>();
+        private readonly Dictionary<int, EventBinding> _bindings = new Dictionary<int, EventBinding>();
 
         public void Subscribe(int eventKey, Action callback)
         {
-            if (callback == null)
-            {
-                Log.Error("[EventBus] Subscribe failed: callback is null.");
-                return;
-            }
-
-            if (!_bindings.ContainsKey(eventKey))
-            {
-                _bindings.Add(eventKey, callback);
-                return;
-            }
-
-            if (!TryGetAction(eventKey, out Action action))
-            {
-                return;
-            }
-
-            action += callback;
-            _bindings[eventKey] = action;
+            SubscribeInternal(eventKey, callback);
         }
 
         public void Subscribe<T1>(int eventKey, Action<T1> callback)
         {
-            if (callback == null)
-            {
-                Log.Error("[EventBus] Subscribe failed: callback is null.");
-                return;
-            }
-
-            if (!_bindings.ContainsKey(eventKey))
-            {
-                _bindings.Add(eventKey, callback);
-                return;
-            }
-
-            if (!TryGetAction(eventKey, out Action<T1> action))
-            {
-                return;
-            }
-
-            action += callback;
-            _bindings[eventKey] = action;
+            SubscribeInternal(eventKey, callback);
         }
 
         public void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
         {
-            if (callback == null)
-            {
-                Log.Error("[EventBus] Subscribe failed: callback is null.");
-                return;
-            }
-
-            if (!_bindings.ContainsKey(eventKey))
-            {
-                _bindings.Add(eventKey, callback);
-                return;
-            }
-
-            if (!TryGetAction(eventKey, out Action<T1, T2> action))
-            {
-                return;
-            }
-
-            action += callback;
-            _bindings[eventKey] = action;
+            SubscribeInternal(eventKey, callback);
         }
 
         public void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
+            SubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe(int eventKey, Action callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1>(int eventKey, Action<T1> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        public void Unsubscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
+        {
+            UnsubscribeInternal(eventKey, callback);
+        }
+
+        private void SubscribeInternal<TCallback>(int eventKey, TCallback callback)
+            where TCallback : Delegate
+        {
             if (callback == null)
             {
                 Log.Error("[EventBus] Subscribe failed: callback is null.");
                 return;
             }
 
-            if (!_bindings.ContainsKey(eventKey))
+            if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
-                _bindings.Add(eventKey, callback);
-                return;
+                binding = new EventBinding(eventKey);
+                _bindings.Add(eventKey, binding);
             }
 
-            if (!TryGetAction(eventKey, out Action<T1, T2, T3> action))
+            if (!binding.TryAdd(callback))
             {
-                return;
-            }
-
-            action += callback;
-            _bindings[eventKey] = action;
-        }
-
-        public void Unsubscribe(int eventKey, Action callback)
-        {
-            if (callback == null || !TryGetAction(eventKey, out Action action))
-            {
-                return;
-            }
-
-            action -= callback;
-            if (action == null)
-            {
-                _bindings.Remove(eventKey);
-            }
-            else
-            {
-                _bindings[eventKey] = action;
+                Log.Error($"[EventBus] EventKey {eventKey} uses a different callback type.");
             }
         }
 
-        public void Unsubscribe<T1>(int eventKey, Action<T1> callback)
+        private void UnsubscribeInternal<TCallback>(int eventKey, TCallback callback)
+            where TCallback : Delegate
         {
-            if (callback == null || !TryGetAction(eventKey, out Action<T1> action))
+            if (callback == null || !_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
                 return;
             }
 
-            action -= callback;
-            if (action == null)
+            if (!binding.TryRemove(callback, out bool isEmpty))
             {
-                _bindings.Remove(eventKey);
-            }
-            else
-            {
-                _bindings[eventKey] = action;
-            }
-        }
-
-        public void Unsubscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
-        {
-            if (callback == null || !TryGetAction(eventKey, out Action<T1, T2> action))
-            {
+                Log.Error($"[EventBus] EventKey {eventKey} uses a different callback type.");
                 return;
             }
 
-            action -= callback;
-            if (action == null)
+            if (isEmpty)
             {
                 _bindings.Remove(eventKey);
-            }
-            else
-            {
-                _bindings[eventKey] = action;
-            }
-        }
-
-        public void Unsubscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
-        {
-            if (callback == null || !TryGetAction(eventKey, out Action<T1, T2, T3> action))
-            {
-                return;
-            }
-
-            action -= callback;
-            if (action == null)
-            {
-                _bindings.Remove(eventKey);
-            }
-            else
-            {
-                _bindings[eventKey] = action;
             }
         }
 
@@ -197,88 +114,42 @@ namespace GameEngine
 
         public void Emit(int eventKey)
         {
-            if (!TryGetAction(eventKey, out Action action))
+            if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
                 return;
             }
 
-            try
-            {
-                action.Invoke();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[EventBus] Exception in listener for key={eventKey}", exception);
-            }
+            binding.Invoke();
         }
 
         public void Emit<T1>(int eventKey, T1 arg1)
         {
-            if (!TryGetAction(eventKey, out Action<T1> action))
+            if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
                 return;
             }
 
-            try
-            {
-                action.Invoke(arg1);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[EventBus] Exception in listener for key={eventKey}", exception);
-            }
+            binding.Invoke(arg1);
         }
 
         public void Emit<T1, T2>(int eventKey, T1 arg1, T2 arg2)
         {
-            if (!TryGetAction(eventKey, out Action<T1, T2> action))
+            if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
                 return;
             }
 
-            try
-            {
-                action.Invoke(arg1, arg2);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[EventBus] Exception in listener for key={eventKey}", exception);
-            }
+            binding.Invoke(arg1, arg2);
         }
 
         public void Emit<T1, T2, T3>(int eventKey, T1 arg1, T2 arg2, T3 arg3)
         {
-            if (!TryGetAction(eventKey, out Action<T1, T2, T3> action))
+            if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
             {
                 return;
             }
 
-            try
-            {
-                action.Invoke(arg1, arg2, arg3);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[EventBus] Exception in listener for key={eventKey}", exception);
-            }
-        }
-
-        private bool TryGetAction<TCall>(int eventKey, out TCall action) where TCall : Delegate
-        {
-            if (!_bindings.TryGetValue(eventKey, out Delegate existing))
-            {
-                action = null;
-                return false;
-            }
-            if (existing.GetType() != typeof(TCall))
-            {
-                Log.Error($"[EventBus] EventKey {eventKey} uses a different callback type.");
-                action = null;
-                return false;
-            }
-
-            action = existing as TCall;
-            return action != null;
+            binding.Invoke(arg1, arg2, arg3);
         }
     }
 }

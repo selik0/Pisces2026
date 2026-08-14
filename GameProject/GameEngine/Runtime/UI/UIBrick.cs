@@ -25,6 +25,7 @@ namespace GameEngine
     public abstract class UIBrick
     {
         private bool _pendingEntityDestroy;
+        private readonly EventGroup _eventGroup = new EventGroup();
 
         /// <summary>UI 预制体路径。</summary>
         public virtual string PrefabPath { get; }
@@ -44,6 +45,9 @@ namespace GameEngine
         public bool IsBound => Entity != null;
         public bool IsVisible { get; private set; }
         public bool IsDestroyed => State == UIBrickState.Destroyed;
+
+        /// <summary>当前 UI 实例的事件注册器，关闭时会自动取消全部注册。</summary>
+        protected EventGroup Events => _eventGroup;
 
         /// <summary>
         /// 绑定 UIEntity 并执行一次性初始化。一个实例只能创建一次。
@@ -252,8 +256,9 @@ namespace GameEngine
         {
         }
 
-        protected virtual void UnregisterEvents()
+        private void UnregisterEvents()
         {
+            _eventGroup.UnsubscribeAll();
         }
 
         /// <summary>处理 ESC 或 Android 返回键等返回操作。</summary>
