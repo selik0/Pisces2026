@@ -8,7 +8,7 @@ namespace GameEngine
     /// </summary>
     public sealed class EventGroup : IDisposable
     {
-        private readonly EventBus _eventBus;
+        private readonly EventManager _eventBus;
         private readonly List<Action> _unregisterActions = new List<Action>();
 
         public EventGroup()

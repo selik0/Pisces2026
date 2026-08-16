@@ -6,7 +6,7 @@ namespace GameEngine
     /// MonoBehaviour 单例基类。首次访问时查找场景实例，未找到则自动创建，并跨场景保留。
     /// </summary>
     /// <remarks>只能在 Unity 主线程访问 <see cref="Instance"/>。</remarks>
-    public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoSingleton<T>
+    public abstract class MonoSingleton<T> : MonoBehaviour, ILogin where T : MonoSingleton<T>
     {
         private static T _instance;
         private static bool _isQuitting;
@@ -62,6 +62,16 @@ namespace GameEngine
         protected virtual void OnApplicationQuit()
         {
             _isQuitting = true;
+        }
+
+        public void Login()
+        {
+            
+        }
+
+        public void Logout()
+        {
+            
         }
     }
 }

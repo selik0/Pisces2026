@@ -10,20 +10,16 @@ namespace GameEngine
 
         public static T Instance => _instance;
 
-        public virtual bool IsLoggedIn { get; protected set; }
-
         protected Singleton()
         {
         }
 
         public virtual void Login()
         {
-            IsLoggedIn = true;
         }
 
         public virtual void Logout()
         {
-            IsLoggedIn = false;
         }
     }
 }

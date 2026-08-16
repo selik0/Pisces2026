@@ -57,7 +57,7 @@ namespace GameEngine
                 }
                 catch (Exception caughtException)
                 {
-                    Log.Error($"[EventBus] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
+                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
                 }
             }
 
@@ -79,7 +79,7 @@ namespace GameEngine
                 }
                 catch (Exception caughtException)
                 {
-                    Log.Error($"[EventBus] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
+                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
                 }
             }
 
@@ -101,7 +101,7 @@ namespace GameEngine
                 }
                 catch (Exception caughtException)
                 {
-                    Log.Error($"[EventBus] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
+                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
                 }
             }
 
@@ -123,7 +123,7 @@ namespace GameEngine
                 }
                 catch (Exception caughtException)
                 {
-                    Log.Error($"[EventBus] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
+                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
                 }
             }
 

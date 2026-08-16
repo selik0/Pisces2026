@@ -8,9 +8,13 @@ namespace GameEngine
     /// 同一个 EventKey 必须始终使用相同的参数数量和参数类型。
     /// </summary>
     /// <remarks>非线程安全，应仅在 Unity 主线程使用。</remarks>
-    public sealed class EventBus
+    public sealed class EventManager : Singleton<EventManager>
     {
         private readonly Dictionary<int, EventBinding> _bindings = new Dictionary<int, EventBinding>();
+
+        public EventManager()
+        {
+        }
 
         public void Subscribe(int eventKey, Action callback)
         {
@@ -57,7 +61,7 @@ namespace GameEngine
         {
             if (callback == null)
             {
-                Log.Error("[EventBus] Subscribe failed: callback is null.");
+                Log.Error("[EventManager] Subscribe failed: callback is null.");
                 return;
             }
 
@@ -69,7 +73,7 @@ namespace GameEngine
 
             if (!binding.TryAdd(callback))
             {
-                Log.Error($"[EventBus] EventKey {eventKey} uses a different callback type.");
+                Log.Error($"[EventManager] EventKey {eventKey} uses a different callback type.");
             }
         }
 
@@ -83,7 +87,7 @@ namespace GameEngine
 
             if (!binding.TryRemove(callback, out bool isEmpty))
             {
-                Log.Error($"[EventBus] EventKey {eventKey} uses a different callback type.");
+                Log.Error($"[EventManager] EventKey {eventKey} uses a different callback type.");
                 return;
             }
 
@@ -101,7 +105,7 @@ namespace GameEngine
                 return;
             }
 
-            Log.Debug($"[EventBus] Clear key={eventKey}");
+            Log.Debug($"[EventManager] Clear key={eventKey}");
         }
 
         /// <summary>清除全部订阅。</summary>
@@ -109,7 +113,7 @@ namespace GameEngine
         {
             int removed = _bindings.Count;
             _bindings.Clear();
-            Log.Debug($"[EventBus] ClearAll removed={removed}");
+            Log.Debug($"[EventManager] ClearAll removed={removed}");
         }
 
         public void Emit(int eventKey)

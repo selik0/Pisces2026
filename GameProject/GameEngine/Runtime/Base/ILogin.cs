@@ -5,8 +5,6 @@ namespace GameEngine
     /// </summary>
     public interface ILogin
     {
-        bool IsLoggedIn { get; }
-
         void Login();
 
         void Logout();

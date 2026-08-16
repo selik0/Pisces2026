@@ -12,21 +12,8 @@ namespace GameEngine
     /// </code>
     public static class EventSystem
     {
-        private static EventBus _default;
-
-        /// <summary>全局默认 EventBus 实例。</summary>
-        public static EventBus Default
-        {
-            get
-            {
-                if (_default == null)
-                {
-                    _default = new EventBus();
-                }
-
-                return _default;
-            }
-        }
+        /// <summary>全局默认 EventManager 实例。</summary>
+        public static EventManager Default => EventManager.Instance;
 
         public static void Subscribe(int eventKey, Action callback)
         {
@@ -101,8 +88,7 @@ namespace GameEngine
         /// <summary>重置全局事件总线并丢弃全部订阅。</summary>
         public static void Reset()
         {
-            _default?.ClearAll();
-            _default = null;
+            EventManager.Instance.ClearAll();
         }
     }
 }
