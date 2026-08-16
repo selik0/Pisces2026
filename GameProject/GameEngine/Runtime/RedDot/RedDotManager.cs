@@ -49,15 +49,14 @@ namespace GameEngine
         /// 完全重置红点树，丢弃所有节点与计数。
         /// （测试用，游戏运行时慎用）
         /// </summary>
-        public void Reset()
-            => Tree.Reset();
+        public void Reset() => Tree.Reset();
 
         // ── ILogin ───────────────────────────────────────────────────────────────
 
         /// <summary>登录时重置红点树，保持初始状态。</summary>
         public override void Login()
         {
-            Reset();
+            
         }
 
         /// <summary>登出时重置红点树，避免跨会话残留。</summary>
