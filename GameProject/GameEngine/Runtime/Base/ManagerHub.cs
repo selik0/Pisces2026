@@ -7,7 +7,7 @@ namespace GameEngine
     {
         public CoroutineScheduler Coroutine => CoroutineSystem.Default;
 
-        public EventBus Event => EventSystem.Default;
+        public EventManager Event => EventSystem.Default;
 
         public FsmManager Fsm => FsmSystem.Default;
 
@@ -15,7 +15,7 @@ namespace GameEngine
 
         public SceneManager Scene => SceneSystem.Default;
 
-        public TimerScheduler Timer => TimerSystem.Default;
+        public TimerManager Timer => TimerSystem.Default;
 
         public UIManager UI => UISystem.Default;
 
