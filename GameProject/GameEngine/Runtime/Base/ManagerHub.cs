@@ -11,7 +11,7 @@ namespace GameEngine
 
         public FsmManager Fsm => FsmSystem.Default;
 
-        public RedDotTree RedDot => RedDotSystem.Default;
+        public RedDotManager RedDot => RedDotManager.Instance;
 
         public SceneManager Scene => SceneSystem.Default;
 
@@ -38,7 +38,7 @@ namespace GameEngine
                 FsmSystem.Reset();
                 TimerSystem.Reset();
                 CoroutineSystem.Reset();
-                RedDotSystem.Reset();
+                RedDotManager.Instance.Logout();
                 EventSystem.Reset();
             }
 
