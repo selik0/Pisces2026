@@ -14,6 +14,7 @@ namespace GameEngine
         private readonly bool _repeat;
         private readonly float _interval;
         private readonly int _maxRepeat;
+        private readonly bool _useTimeScale;
 
         private float _remaining;
         private int _repeatCount;
@@ -26,6 +27,12 @@ namespace GameEngine
         public bool IsDone => _isDone;
 
         /// <summary>
+        /// 是否受 <see cref="UnityEngine.Time.timeScale"/> 影响。
+        /// 默认 true，即使用受时间缩放影响的时间（scaled time）。
+        /// </summary>
+        public bool UseTimeScale => _useTimeScale;
+
+        /// <summary>
         /// 创建定时器条目。
         /// </summary>
         /// <param name="delay">首次触发前的延迟（秒），≥ 0</param>
@@ -33,7 +40,13 @@ namespace GameEngine
         /// <param name="repeat">是否重复触发</param>
         /// <param name="interval">重复触发的间隔（秒），≤ 0 时使用 delay 作为间隔</param>
         /// <param name="maxRepeat">最大重复次数，≤ 0 表示无限</param>
-        public TimerEntry(float delay, Action callback, bool repeat = false, float interval = 0f, int maxRepeat = 0)
+        /// <param name="useTimeScale">是否受时间缩放影响，默认 true 表示使用 scaled time</param>
+        public TimerEntry(float delay,
+                          Action callback,
+                          bool repeat = false,
+                          float interval = 0f,
+                          int maxRepeat = 0,
+                          bool useTimeScale = true)
         {
             if (callback == null)
             {
@@ -49,6 +62,7 @@ namespace GameEngine
             _repeat = repeat;
             _interval = (repeat && interval > 0f) ? interval : delay;
             _maxRepeat = maxRepeat;
+            _useTimeScale = useTimeScale;
             _remaining = delay;
 
             Id = _nextId++;
@@ -70,7 +84,7 @@ namespace GameEngine
                 return;
             }
 
-            _remaining -= UnityEngine.Time.deltaTime;
+            _remaining -= _useTimeScale ? UnityEngine.Time.deltaTime : UnityEngine.Time.unscaledDeltaTime;
             if (_remaining >= 0f)
             {
                 return;

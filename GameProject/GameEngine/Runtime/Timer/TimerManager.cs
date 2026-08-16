@@ -45,12 +45,14 @@ namespace GameEngine
         /// 若 ≤ 0 则使用 <paramref name="delay"/> 作为间隔。
         /// </param>
         /// <param name="maxRepeat">最大重复次数，≤ 0 表示无限重复。仅在 <paramref name="repeat"/> 为 true 时有效</param>
+        /// <param name="useTimeScale">是否受时间缩放影响，默认 true 表示使用 scaled time</param>
         /// <returns>定时器 ID，可用于 <see cref="Stop"/> 停止；失败时返回 -1</returns>
         public int Schedule(float delay, 
                              Action callback,
                              bool repeat = false,
                              float interval = 0f,
-                             int maxRepeat = 0)
+                             int maxRepeat = 0,
+                             bool useTimeScale = true)
         {
             if (callback == null)
             {
@@ -58,11 +60,11 @@ namespace GameEngine
                 return -1;
             }
 
-            var entry = new TimerEntry(delay, callback, repeat, interval, maxRepeat);
+            var entry = new TimerEntry(delay, callback, repeat, interval, maxRepeat, useTimeScale);
 
             _toAdd.Add(entry);
 
-            Log.Debug($"[Timer] Schedule  #{entry.Id}  delay={delay:F3}s  repeat={repeat}  maxRepeat={maxRepeat}");
+            Log.Debug($"[Timer] Schedule  #{entry.Id}  delay={delay:F3}s  repeat={repeat}  maxRepeat={maxRepeat}  useTimeScale={useTimeScale}");
             return entry.Id;
         }
 
