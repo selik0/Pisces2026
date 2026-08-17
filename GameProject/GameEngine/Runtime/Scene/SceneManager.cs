@@ -6,6 +6,8 @@ namespace GameEngine
     /// <summary>
     /// 场景管理器。
     /// <para>
+    /// 继承 <see cref="Singleton{T}"/>（实现 <see cref="ILogin"/>），
+    /// 登录/登出时销毁所有场景，避免跨会话残留。
     /// 统一注册、切换和驱动所有 <see cref="IScene"/> 实例。
     /// 需要在游戏主循环中每帧调用 <see cref="Tick"/>。
     /// </para>
@@ -19,8 +21,12 @@ namespace GameEngine
     /// </list>
     /// </remarks>
     /// </summary>
-    public sealed class SceneManager
+    public sealed class SceneManager : Singleton<SceneManager>, ILogin
     {
+        public SceneManager()
+        {
+        }
+
         private readonly Dictionary<string, IScene> _scenes = new Dictionary<string, IScene>();
 
         /// <summary>当前激活的场景，未切换前为 null</summary>
@@ -38,24 +44,24 @@ namespace GameEngine
         /// 注册一个场景。场景名称须唯一。
         /// </summary>
         /// <param name="scene">要注册的场景实例，不可为 null</param>
-        /// <exception cref="ArgumentNullException">scene 为 null 时抛出</exception>
-        /// <exception cref="InvalidOperationException">同名场景已存在时抛出</exception>
         public void Register(IScene scene)
         {
             if (scene == null)
             {
-                throw new ArgumentNullException(nameof(scene));
+                Log.Error("[SceneManager] 注册失败：scene 为 null。");
+                return;
             }
 
             if (string.IsNullOrEmpty(scene.Name))
             {
-                throw new ArgumentException("[SceneManager] 场景名称不能为空。");
+                Log.Error("[SceneManager] 注册失败：场景名称不能为空。");
+                return;
             }
 
             if (_scenes.ContainsKey(scene.Name))
             {
-                throw new InvalidOperationException(
-                    $"[SceneManager] 已存在名称为 '{scene.Name}' 的场景。");
+                Log.Error($"[SceneManager] 注册失败：已存在名称为 '{scene.Name}' 的场景。");
+                return;
             }
 
             _scenes[scene.Name] = scene;
@@ -79,11 +85,18 @@ namespace GameEngine
             if (CurrentScene == scene)
             {
                 ExitCurrentScene();
-                CurrentScene = null;
             }
 
-            scene.OnDestroy();
             _scenes.Remove(name);
+
+            try
+            {
+                scene.OnDestroy();
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[SceneManager] 场景 OnDestroy 异常  name='{scene.Name}'", ex);
+            }
 
             Log.Debug($"[SceneManager] 注销场景  name={name}");
         }
@@ -127,13 +140,12 @@ namespace GameEngine
         /// </summary>
         /// <param name="name">目标场景名称</param>
         /// <param name="args">传递给目标场景的参数，可为 null</param>
-        /// <exception cref="InvalidOperationException">目标场景未注册时抛出</exception>
         public void SwitchTo(string name, SceneArgs args = null)
         {
             if (!_scenes.TryGetValue(name, out var next))
             {
-                throw new InvalidOperationException(
-                    $"[SceneManager] 未找到名称为 '{name}' 的场景，无法切换。");
+                Log.Error($"[SceneManager] 切换失败：未找到名称为 '{name}' 的场景。");
+                return;
             }
 
             if (CurrentScene == next)
@@ -160,7 +172,6 @@ namespace GameEngine
         /// </summary>
         /// <typeparam name="TScene">目标场景类型</typeparam>
         /// <param name="args">传递给目标场景的参数，可为 null</param>
-        /// <exception cref="InvalidOperationException">找不到对应类型的已注册场景时抛出</exception>
         public void SwitchTo<TScene>(SceneArgs args = null) where TScene : class, IScene
         {
             foreach (var scene in _scenes.Values)
@@ -171,8 +182,8 @@ namespace GameEngine
                     return;
                 }
             }
-            throw new InvalidOperationException(
-                $"[SceneManager] 未找到类型为 '{typeof(TScene).Name}' 的已注册场景。");
+
+            Log.Error($"[SceneManager] 切换失败：未找到类型为 '{typeof(TScene).Name}' 的已注册场景。");
         }
 
         // ── Tick ─────────────────────────────────────────────────────────────────
@@ -190,33 +201,66 @@ namespace GameEngine
 
         /// <summary>
         /// 退出当前场景并销毁所有已注册场景。
+        /// 先快照再清理，单个场景销毁异常不会中断其余场景的清理。
         /// </summary>
         public void DestroyAll()
         {
             ExitCurrentScene();
-            CurrentScene = null;
 
-            foreach (var scene in _scenes.Values)
-            {
-                scene.OnDestroy();
-            }
-
+            var snapshot = new List<IScene>(_scenes.Values);
             _scenes.Clear();
 
+            foreach (var scene in snapshot)
+            {
+                try
+                {
+                    scene.OnDestroy();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"[SceneManager] 场景 OnDestroy 异常  name='{scene.Name}'", ex);
+                }
+            }
+
             Log.Debug("[SceneManager] 已销毁所有场景");
+        }
+
+        // ── ILogin ───────────────────────────────────────────────────────────────
+
+        /// <summary>登录时清理残留场景，保持初始状态。</summary>
+        public override void Login()
+        {
+            DestroyAll();
+        }
+
+        /// <summary>登出时销毁所有场景，避免跨会话残留。</summary>
+        public override void Logout()
+        {
+            DestroyAll();
         }
 
         // ── 内部辅助 ─────────────────────────────────────────────────────────────
 
         private void ExitCurrentScene()
         {
-            if (CurrentScene == null)
+            var scene = CurrentScene;
+            if (scene == null)
             {
                 return;
             }
 
-            CurrentScene.OnExit();
-            SetSceneActive(CurrentScene, false);
+            CurrentScene = null;
+
+            try
+            {
+                scene.OnExit();
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[SceneManager] 场景 OnExit 异常  name='{scene.Name}'", ex);
+            }
+
+            SetSceneActive(scene, false);
         }
 
         private static void SetSceneActive(IScene scene, bool active)

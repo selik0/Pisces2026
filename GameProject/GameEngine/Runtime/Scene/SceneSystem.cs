@@ -1,7 +1,7 @@
 namespace GameEngine
 {
     /// <summary>
-    /// 全局场景系统静态入口，内部持有默认的 <see cref="SceneManager"/> 单例。
+    /// 全局场景系统静态入口，内部通过 <see cref="SceneManager.Instance"/> 提供默认单例。
     ///
     /// <para>
     /// 需要在游戏主循环中每帧调用 <see cref="Tick"/>，通常放在 GameBootstrap.Update 中。
@@ -39,21 +39,8 @@ namespace GameEngine
     /// </summary>
     public static class SceneSystem
     {
-        private static SceneManager _default;
-
-        /// <summary>全局默认 SceneManager 实例（懒初始化）</summary>
-        public static SceneManager Default
-        {
-            get
-            {
-                if (_default == null)
-                {
-                    _default = new SceneManager();
-                }
-
-                return _default;
-            }
-        }
+        /// <summary>全局默认 SceneManager 实例</summary>
+        public static SceneManager Default => SceneManager.Instance;
 
         /// <summary>当前激活的场景，未切换前为 null</summary>
         public static IScene CurrentScene => Default.CurrentScene;
@@ -120,12 +107,11 @@ namespace GameEngine
         // ── 重置 ─────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 完全重置全局场景系统（测试用，游戏运行时慎用）。
+        /// 销毁所有场景并重置状态（测试用，游戏运行时慎用）。
         /// </summary>
         public static void Reset()
         {
-            _default?.DestroyAll();
-            _default = null;
+            SceneManager.Instance.DestroyAll();
         }
     }
 }
