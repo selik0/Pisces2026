@@ -22,11 +22,11 @@ namespace GameEngine
 
         public bool IsCompleted => _remaining <= 0f;
 
-        public void Tick(float deltaTime)
+        public void Tick()
         {
             if (_remaining > 0f)
             {
-                _remaining -= deltaTime;
+                _remaining -= UnityEngine.Time.deltaTime;
             }
         }
     }
@@ -51,7 +51,7 @@ namespace GameEngine
 
         public bool IsCompleted => _remaining <= 0;
 
-        public void Tick(float deltaTime)
+        public void Tick()
         {
             if (_remaining > 0)
             {
@@ -79,7 +79,7 @@ namespace GameEngine
 
         public bool IsCompleted => _predicate();
 
-        public void Tick(float deltaTime) { /* 无状态，每帧直接检查条件 */ }
+        public void Tick() { /* 无状态，每帧直接检查条件 */ }
     }
 
     // ── WaitWhile ─────────────────────────────────────────────────────────────
@@ -101,30 +101,7 @@ namespace GameEngine
 
         public bool IsCompleted => !_predicate();
 
-        public void Tick(float deltaTime) { }
-    }
-
-    // ── WaitForCoroutine ──────────────────────────────────────────────────────
-
-    /// <summary>
-    /// 等待另一个协程完成后继续（嵌套协程）。
-    /// <code>
-    /// var inner = CoroutineSystem.Start(InnerRoutine());
-    /// yield return new WaitForCoroutine(inner);
-    /// </code>
-    /// </summary>
-    public sealed class WaitForCoroutine : IYieldInstruction
-    {
-        private readonly CoroutineHandle _handle;
-
-        public WaitForCoroutine(CoroutineHandle handle)
-        {
-            _handle = handle ?? throw new ArgumentNullException(nameof(handle));
-        }
-
-        public bool IsCompleted => _handle.IsDone;
-
-        public void Tick(float deltaTime) { }
+        public void Tick() { }
     }
 
     // ── NextFrame ─────────────────────────────────────────────────────────────
@@ -145,6 +122,6 @@ namespace GameEngine
         // 注意：每次使用需 new 一个，或由调度器重置；单例版本由调度器特殊处理
         public bool IsCompleted => _ticked;
 
-        public void Tick(float deltaTime) { _ticked = true; }
+        public void Tick() { _ticked = true; }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections;
 namespace GameEngine
 {
     /// <summary>
-    /// 全局协程系统静态入口，内部持有默认的 <see cref="CoroutineScheduler"/> 单例。
+    /// 全局协程系统静态入口，内部持有默认的 <see cref="CoroutineManager"/> 单例。
     ///
     /// <para>
     /// 需要在游戏主循环中每帧调用 <see cref="Tick"/>，通常放在 GameBootstrap.Update 中。
@@ -16,14 +16,12 @@ namespace GameEngine
     ///   <item><term><c>new WaitForFrames(n)</c></term><description>等待 n 帧</description></item>
     ///   <item><term><c>new WaitUntil(() => cond)</c></term><description>等待条件为 true</description></item>
     ///   <item><term><c>new WaitWhile(() => cond)</c></term><description>等待条件为 false</description></item>
-    ///   <item><term><c>new WaitForCoroutine(handle)</c></term><description>等待另一个协程完成</description></item>
     ///   <item><term><c>IEnumerator</c></term><description>内联执行子协程</description></item>
-    ///   <item><term><c>CoroutineHandle</c></term><description>等待已启动的外部协程</description></item>
     /// </list>
     ///
     /// <code>
     /// // ── 游戏启动 Bootstrap ────────────────────────────────
-    /// void Update() => CoroutineSystem.Tick(Time.deltaTime);
+    /// void Update() => CoroutineSystem.Tick();
     ///
     /// // ── 启动协程 ──────────────────────────────────────────
     /// CoroutineSystem.Start(ShowTipRoutine());
@@ -42,61 +40,26 @@ namespace GameEngine
     ///     Log.Debug("子协程结束");
     /// }
     ///
-    /// // ── 等待外部协程 ──────────────────────────────────────
-    /// var h = CoroutineSystem.Start(LoadingRoutine());
-    /// CoroutineSystem.Start(WaitAndDoSomething(h));
-    ///
-    /// IEnumerator WaitAndDoSomething(CoroutineHandle loading)
-    /// {
-    ///     yield return loading;          // 等待 loading 完成
-    ///     Log.Debug("加载完毕，继续执行");
-    /// }
-    ///
     /// // ── 停止协程 ──────────────────────────────────────────
-    /// var handle = CoroutineSystem.Start(MyRoutine());
-    /// handle.Stop();
+    /// int id = CoroutineSystem.Start(MyRoutine());
+    /// CoroutineSystem.Stop(id);
     /// </code>
     /// </summary>
     public static class CoroutineSystem
     {
-        private static CoroutineScheduler _default;
-
-        /// <summary>全局默认 CoroutineScheduler 实例（懒初始化）</summary>
-        public static CoroutineScheduler Default
-        {
-            get
-            {
-                if (_default == null)
-                {
-                    _default = new CoroutineScheduler();
-                }
-
-                return _default;
-            }
-        }
-
-        // ── Tick ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 推进所有协程一帧。应在 MonoBehaviour.Update 中每帧调用。
-        /// </summary>
-        /// <param name="deltaTime">帧间隔（秒），传入 <c>Time.deltaTime</c></param>
-        public static void Tick(float deltaTime)
-            => Default.Tick(deltaTime);
+        /// <summary>全局默认 CoroutineManager 实例。</summary>
+        public static CoroutineManager Default => CoroutineManager.Instance;
 
         // ── Start / Stop ─────────────────────────────────────────────────────────
 
-        /// <inheritdoc cref="CoroutineScheduler.Start"/>
-        public static CoroutineHandle Start(IEnumerator routine)
-            => Default.Start(routine);
+        /// <inheritdoc cref="CoroutineManager.Start"/>
+        public static int Start(IEnumerator routine) => Default.Start(routine);
 
-        /// <inheritdoc cref="CoroutineScheduler.Stop"/>
-        public static void Stop(CoroutineHandle handle)
-            => Default.Stop(handle);
+        /// <inheritdoc cref="CoroutineManager.Stop"/>
+        public static void Stop(int id) => Default.Stop(id);
 
-        /// <inheritdoc cref="CoroutineScheduler.StopAll"/>
-        public static void StopAll()
-            => Default.StopAll();
+        /// <inheritdoc cref="CoroutineManager.StopAll"/>
+        public static void StopAll() => Default.StopAll();
 
         // ── 重置 ─────────────────────────────────────────────────────────────────
 
@@ -105,8 +68,7 @@ namespace GameEngine
         /// </summary>
         public static void Reset()
         {
-            _default?.StopAll();
-            _default = null;
+            Default.StopAll();
         }
     }
 }

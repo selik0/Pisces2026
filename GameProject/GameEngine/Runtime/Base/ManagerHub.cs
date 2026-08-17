@@ -5,7 +5,7 @@ namespace GameEngine
     /// </summary>
     public class ManagerHub : MonoSingleton<ManagerHub>
     {
-        public CoroutineScheduler Coroutine => CoroutineSystem.Default;
+        public CoroutineManager Coroutine => CoroutineSystem.Default;
 
         public EventManager Event => EventSystem.Default;
 
@@ -21,25 +21,13 @@ namespace GameEngine
 
         protected virtual void Update()
         {
-            float deltaTime = UnityEngine.Time.deltaTime;
-            CoroutineSystem.Tick(deltaTime);
-            TimerSystem.Tick(deltaTime);
-            FsmSystem.Tick(deltaTime);
-            SceneSystem.Tick(deltaTime);
-            UISystem.Tick(deltaTime);
         }
 
         protected override void OnDestroy()
         {
             if (Instance == this)
             {
-                UISystem.Reset();
-                SceneSystem.Reset();
-                FsmSystem.Reset();
-                TimerSystem.Reset();
-                CoroutineSystem.Reset();
-                RedDotManager.Instance.Logout();
-                EventSystem.Reset();
+                
             }
 
             base.OnDestroy();
