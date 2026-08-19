@@ -5,20 +5,6 @@ namespace GameEngine
     /// </summary>
     public class ManagerHub : MonoSingleton<ManagerHub>
     {
-        public CoroutineManager Coroutine => CoroutineSystem.Default;
-
-        public EventManager Event => EventSystem.Default;
-
-        public FsmManager Fsm => FsmSystem.Default;
-
-        public RedDotManager RedDot => RedDotManager.Instance;
-
-        public SceneManager Scene => SceneSystem.Default;
-
-        public TimerManager Timer => TimerSystem.Default;
-
-        public UIManager UI => UISystem.Default;
-
         protected virtual void Update()
         {
         }
