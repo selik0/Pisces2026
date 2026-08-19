@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace GameEngine
@@ -33,11 +32,17 @@ namespace GameEngine
             var key = GetKey<T>(name);
             if (_fsms.ContainsKey(key))
             {
-                throw new InvalidOperationException(
+                Log.Error(
                     $"[FsmManager] 已存在名称为 '{name}'、持有者类型为 '{typeof(T).Name}' 的有限状态机。");
+                return null;
             }
 
             var fsm = Fsm<T>.Create(name, owner, states);
+            if (fsm == null)
+            {
+                return null;
+            }
+
             _fsms[key] = new FsmWrapper<T>(fsm);
 
             Log.Debug($"[FsmManager] 创建 FSM  key={key}  states={states.Length}");
@@ -60,7 +65,8 @@ namespace GameEngine
         {
             if (fsm == null)
             {
-                throw new ArgumentNullException(nameof(fsm));
+                Log.Error("[FsmManager] DestroyFsm 失败：fsm 为 null。");
+                return;
             }
 
             DestroyFsmByKey(GetKey<T>(fsm.Name));

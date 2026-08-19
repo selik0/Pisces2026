@@ -59,7 +59,13 @@ namespace GameEngine
         /// <summary>设置自定义 UI 预制体加载器。</summary>
         public void SetLoader(IUIViewLoader loader)
         {
-            _loader = loader ?? throw new ArgumentNullException(nameof(loader));
+            if (loader == null)
+            {
+                Log.Error("[UIManager] SetLoader 失败：loader 为 null。");
+                return;
+            }
+
+            _loader = loader;
         }
 
         /// <summary>配置某层是否遮盖下层界面。默认除 <see cref="UILayer.Guide"/>、<see cref="UILayer.Toast"/> 外均遮盖。</summary>

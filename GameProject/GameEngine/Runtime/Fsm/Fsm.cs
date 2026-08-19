@@ -39,12 +39,14 @@ namespace GameEngine
         {
             if (owner == null)
             {
-                throw new ArgumentNullException(nameof(owner));
+                Log.Error("[Fsm] 创建失败：owner 为 null。");
+                return null;
             }
 
             if (states == null || states.Length == 0)
             {
-                throw new ArgumentException("FSM 状态集合不能为空。", nameof(states));
+                Log.Error("[Fsm] 创建失败：状态集合不能为空。");
+                return null;
             }
 
             var fsm = new Fsm<T>
@@ -57,13 +59,15 @@ namespace GameEngine
             {
                 if (state == null)
                 {
-                    throw new ArgumentNullException(nameof(states), "FSM 状态不能为 null。");
+                    Log.Error($"[Fsm:{name}] 创建失败：状态不能为 null。");
+                    return null;
                 }
 
                 var type = state.GetType();
                 if (fsm._states.ContainsKey(type))
                 {
-                    throw new ArgumentException($"FSM 已存在类型为 '{type.FullName}' 的状态，不能重复添加。");
+                    Log.Error($"[Fsm:{name}] 已存在类型为 '{type.FullName}' 的状态，不能重复添加。");
+                    return null;
                 }
 
                 fsm._states[type] = state;
@@ -107,20 +111,28 @@ namespace GameEngine
         {
             if (_isDestroyed)
             {
-                throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已销毁，无法启动。");
+                Log.Error($"[FSM:{Name}] 有限状态机已销毁，无法启动。");
+                return;
             }
 
             if (_currentState != null)
             {
-                throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已在运行中。");
+                Log.Error($"[FSM:{Name}] 有限状态机已在运行中。");
+                return;
             }
 
             if (stateType == null)
             {
-                throw new ArgumentNullException(nameof(stateType));
+                Log.Error($"[FSM:{Name}] 启动失败：stateType 为 null。");
+                return;
             }
 
             var state = GetStateInternal(stateType);
+            if (state == null)
+            {
+                return;
+            }
+
             _currentState     = state;
             _currentStateTime = 0f;
             ((IFsmState<T>)state).OnEnter(this);
@@ -139,7 +151,8 @@ namespace GameEngine
         {
             if (stateType == null)
             {
-                throw new ArgumentNullException(nameof(stateType));
+                Log.Error($"[FSM:{Name}] HasState 失败：stateType 为 null。");
+                return false;
             }
 
             return _states.ContainsKey(stateType);
@@ -156,7 +169,8 @@ namespace GameEngine
         {
             if (stateType == null)
             {
-                throw new ArgumentNullException(nameof(stateType));
+                Log.Error($"[FSM:{Name}] GetState 失败：stateType 为 null。");
+                return null;
             }
 
             return GetStateInternal(stateType);
@@ -182,7 +196,8 @@ namespace GameEngine
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new ArgumentNullException(nameof(name));
+                Log.Error($"[FSM:{Name}] GetData 失败：name 为 null 或空。");
+                return default;
             }
 
             if (_dataDict.TryGetValue(name, out var value))
@@ -198,7 +213,8 @@ namespace GameEngine
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new ArgumentNullException(nameof(name));
+                Log.Error($"[FSM:{Name}] SetData 失败：name 为 null 或空。");
+                return;
             }
 
             _dataDict[name] = data;
@@ -209,7 +225,8 @@ namespace GameEngine
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new ArgumentNullException(nameof(name));
+                Log.Error($"[FSM:{Name}] HasData 失败：name 为 null 或空。");
+                return false;
             }
 
             return _dataDict.ContainsKey(name);
@@ -220,7 +237,8 @@ namespace GameEngine
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new ArgumentNullException(nameof(name));
+                Log.Error($"[FSM:{Name}] RemoveData 失败：name 为 null 或空。");
+                return false;
             }
 
             return _dataDict.Remove(name);
@@ -237,17 +255,20 @@ namespace GameEngine
         {
             if (stateType == null)
             {
-                throw new ArgumentNullException(nameof(stateType));
+                Log.Error($"[FSM:{Name}] ChangeState 失败：stateType 为 null。");
+                return;
             }
 
             if (_isDestroyed)
             {
-                throw new InvalidOperationException($"[FSM:{Name}] 有限状态机已销毁，无法切换状态。");
+                Log.Error($"[FSM:{Name}] 有限状态机已销毁，无法切换状态。");
+                return;
             }
 
             if (_currentState == null)
             {
-                throw new InvalidOperationException($"[FSM:{Name}] 有限状态机尚未启动，无法切换状态。");
+                Log.Error($"[FSM:{Name}] 有限状态机尚未启动，无法切换状态。");
+                return;
             }
 
             // 延迟到本帧 Tick 结束后执行
@@ -315,8 +336,8 @@ namespace GameEngine
         {
             if (!_states.TryGetValue(stateType, out var state))
             {
-                throw new InvalidOperationException(
-                    $"[FSM:{Name}] 不存在类型为 '{stateType.FullName}' 的状态。");
+                Log.Error($"[FSM:{Name}] 不存在类型为 '{stateType.FullName}' 的状态。");
+                return null;
             }
 
             return state;
@@ -325,6 +346,11 @@ namespace GameEngine
         private void DoChangeState(Type newStateType)
         {
             var newState = GetStateInternal(newStateType);
+            if (newState == null)
+            {
+                return;
+            }
+
             if (ReferenceEquals(newState, _currentState))
             {
                 return;

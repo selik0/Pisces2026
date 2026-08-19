@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
+using GameEngine;
 using OfficeOpenXml;
 
 namespace GameEngineEditor
@@ -25,7 +25,8 @@ namespace GameEngineEditor
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+                Log.Error($"Excel 文件不存在：{filePath}");
+                return null;
             }
 
             var result = new List<List<string>>();
@@ -38,7 +39,8 @@ namespace GameEngineEditor
 
                 if (sheet == null)
                 {
-                    throw new ArgumentException($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                    Log.Error($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                    return null;
                 }
 
                 int rowCount = sheet.Dimension?.Rows ?? 0;
@@ -72,7 +74,8 @@ namespace GameEngineEditor
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+                Log.Error($"Excel 文件不存在：{filePath}");
+                return null;
             }
 
             var result = new List<Dictionary<string, string>>();
@@ -85,7 +88,8 @@ namespace GameEngineEditor
 
                 if (sheet == null)
                 {
-                    throw new ArgumentException($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                    Log.Error($"找不到 Sheet：{sheetName ?? "(第一个)"}");
+                    return null;
                 }
 
                 int rowCount = sheet.Dimension?.Rows ?? 0;
@@ -121,7 +125,8 @@ namespace GameEngineEditor
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"Excel 文件不存在：{filePath}");
+                Log.Error($"Excel 文件不存在：{filePath}");
+                return null;
             }
 
             var names = new List<string>();

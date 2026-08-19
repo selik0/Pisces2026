@@ -29,13 +29,16 @@ namespace GameEngine
         /// <param name="routine">由 <c>IEnumerator</c> 方法生成的迭代器</param>
         public CoroutineEntry(IEnumerator routine)
         {
-            if (routine == null)
-            {
-                throw new ArgumentNullException(nameof(routine));
-            }
-
             Id = _nextId++;
             _stack = new Stack<IEnumerator>();
+
+            if (routine == null)
+            {
+                Log.Error($"[Coroutine] #{Id} 创建失败：routine 为 null。");
+                _isDone = true;
+                return;
+            }
+
             _stack.Push(routine);
         }
 

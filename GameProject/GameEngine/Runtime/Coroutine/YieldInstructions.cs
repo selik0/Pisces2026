@@ -74,7 +74,14 @@ namespace GameEngine
 
         public WaitUntil(Func<bool> predicate)
         {
-            _predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+            if (predicate == null)
+            {
+                Log.Error("WaitUntil 创建失败：predicate 为 null，指令将立即完成。");
+                _predicate = () => true;
+                return;
+            }
+
+            _predicate = predicate;
         }
 
         public bool IsCompleted => _predicate();
@@ -96,7 +103,14 @@ namespace GameEngine
 
         public WaitWhile(Func<bool> predicate)
         {
-            _predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+            if (predicate == null)
+            {
+                Log.Error("WaitWhile 创建失败：predicate 为 null，指令将立即完成。");
+                _predicate = () => false;
+                return;
+            }
+
+            _predicate = predicate;
         }
 
         public bool IsCompleted => !_predicate();
