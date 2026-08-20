@@ -9,7 +9,7 @@ namespace GameEngine
     /// <c>Time.realtimeSinceStartup</c> 推算当前服务器时间，不依赖客户端本地时钟。
     /// </para>
     /// </summary>
-    public static class TimeHelper
+    public static class TimeUtility
     {
         private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private const long SecondsPerDay = 86400;
