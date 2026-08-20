@@ -13,7 +13,7 @@ namespace GameEngine
 
         public EventGroup()
         {
-            _eventBus = EventSystem.Default;
+            _eventBus = EventManager.Instance;
         }
 
         public void Subscribe(int eventKey, Action callback)

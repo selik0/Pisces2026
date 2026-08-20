@@ -57,18 +57,5 @@ namespace GameEngine
 
         /// <inheritdoc cref="CoroutineManager.Stop"/>
         public static void Stop(int id) => Default.Stop(id);
-
-        /// <inheritdoc cref="CoroutineManager.StopAll"/>
-        public static void StopAll() => Default.StopAll();
-
-        // ── 重置 ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 完全重置全局协程系统（测试用，游戏运行时慎用）。
-        /// </summary>
-        public static void Reset()
-        {
-            Default.StopAll();
-        }
     }
 }

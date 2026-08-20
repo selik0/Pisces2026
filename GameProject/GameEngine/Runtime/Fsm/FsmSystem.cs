@@ -88,22 +88,5 @@ namespace GameEngine
         /// <inheritdoc cref="FsmManager.DestroyFsm{T}(IFsm{T})"/>
         public static void DestroyFsm<T>(IFsm<T> fsm) where T : class
             => Default.DestroyFsm(fsm);
-
-        // ── DestroyAll ───────────────────────────────────────────────────────────
-
-        /// <inheritdoc cref="FsmManager.DestroyAll"/>
-        public static void DestroyAll()
-            => Default.DestroyAll();
-
-        // ── 重置 ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 完全重置全局有限状态机系统（测试用，游戏运行时慎用）。
-        /// </summary>
-        public static void Reset()
-        {
-            _default?.DestroyAll();
-            _default = null;
-        }
     }
 }

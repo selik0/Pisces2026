@@ -79,16 +79,5 @@ namespace GameEngine
         {
             Default.Clear(eventKey);
         }
-
-        public static void ClearAll()
-        {
-            Default.ClearAll();
-        }
-
-        /// <summary>重置全局事件总线并丢弃全部订阅。</summary>
-        public static void Reset()
-        {
-            EventManager.Instance.ClearAll();
-        }
     }
 }

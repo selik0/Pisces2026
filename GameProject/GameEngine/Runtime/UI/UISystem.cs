@@ -184,22 +184,5 @@ namespace GameEngine
         /// <inheritdoc cref="UIManager.Tick"/>
         public static void Tick(float deltaTime)
             => Default.Tick(deltaTime);
-
-        // ── 销毁全部 ─────────────────────────────────────────────────────────────
-
-        /// <inheritdoc cref="UIManager.DestroyAll"/>
-        public static void DestroyAll()
-            => Default.DestroyAll();
-
-        // ── 重置 ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 完全重置全局 UI 系统（测试用，游戏运行时慎用）。
-        /// </summary>
-        public static void Reset()
-        {
-            _default?.DestroyAll();
-            _default = null;
-        }
     }
 }

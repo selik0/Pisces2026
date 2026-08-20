@@ -14,7 +14,7 @@ namespace GameEngine
 
         public TimerGroup()
         {
-            _timerManager = TimerSystem.Default;
+            _timerManager = TimerManager.Instance;
         }
 
         /// <summary>记录一个已创建的定时器 ID。ID 无效（&lt; 0）时忽略。</summary>

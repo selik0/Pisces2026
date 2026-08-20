@@ -68,10 +68,5 @@ namespace GameEngine
                                    int maxRepeat = 0,
                                    bool useTimeScale = true)
             => Default.Schedule(delay, callback, repeat, interval, maxRepeat, useTimeScale);
-
-        // ── 停止 ─────────────────────────────────────────────────────────────────
-
-        /// <inheritdoc cref="TimerManager.StopAll"/>
-        public static void StopAll() => Default.StopAll();
     }
 }

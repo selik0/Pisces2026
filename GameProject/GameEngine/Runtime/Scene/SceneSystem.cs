@@ -97,21 +97,5 @@ namespace GameEngine
         /// <inheritdoc cref="SceneManager.GetAllScenes"/>
         public static IScene[] GetAllScenes()
             => Default.GetAllScenes();
-
-        // ── 销毁全部 ─────────────────────────────────────────────────────────────
-
-        /// <inheritdoc cref="SceneManager.DestroyAll"/>
-        public static void DestroyAll()
-            => Default.DestroyAll();
-
-        // ── 重置 ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 销毁所有场景并重置状态（测试用，游戏运行时慎用）。
-        /// </summary>
-        public static void Reset()
-        {
-            SceneManager.Instance.DestroyAll();
-        }
     }
 }
