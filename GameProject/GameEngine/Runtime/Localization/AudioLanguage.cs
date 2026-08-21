@@ -1,20 +1,20 @@
 namespace GameEngine
 {
     /// <summary>
-    /// 游戏支持的界面语言。
+    /// 游戏支持的音频语言。
     /// </summary>
-    public enum Language
+    public enum AudioLanguage
     {
-        /// <summary>简体中文</summary>
+        /// <summary>普通话</summary>
         Chinese,
 
-        /// <summary>繁体中文</summary>
-        TraditionalChinese,
+        /// <summary>粤语</summary>
+        Cantonese,
 
-        /// <summary>韩文</summary>
+        /// <summary>韩语</summary>
         Korean,
 
-        /// <summary>日文</summary>
+        /// <summary>日语</summary>
         Japanese,
 
         /// <summary>英语</summary>
