@@ -12,6 +12,10 @@
     <ProjectReference Include="..\GameEngine\GameEngine.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <!-- 引用 GameNative 工程，不复制到输出目录 -->
+    <ProjectReference Include="..\GameNative\GameNative.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <!-- 引用 GameProject/lib 下所有运行时 DLL，不复制到输出目录 -->
