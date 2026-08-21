@@ -15,18 +15,19 @@ namespace GameEngine
         {
             if (string.IsNullOrEmpty(value))
             {
+                Log.Error($"EnumUtility.TryParseEnum: 枚举名称为空，无法解析为 {typeof(TEnum).Name}");
                 result = default(TEnum);
                 return false;
             }
 
-            if (Enum.TryParse(value, true, out result))
+            if (!Enum.TryParse(value, true, out result))
             {
-                return true;
+                Log.Error($"EnumUtility.TryParseEnum: 无法解析 \"{value}\" 为 {typeof(TEnum).Name}");
+                result = default(TEnum);
+                return false;
             }
 
-            Log.Error($"EnumUtility.TryParseEnum: 无法解析 \"{value}\" 为 {typeof(TEnum).Name}");
-            result = default(TEnum);
-            return false;
+            return true;
         }
     }
 }
