@@ -18,7 +18,7 @@ namespace GameEngine
         public Language Language { get; private set; } = Language.Chinese;
 
         /// <summary>当前音频语言。</summary>
-        public Language AudioLanguage { get; private set; } = Language.Chinese;
+        public AudioLanguage AudioLanguage { get; private set; } = AudioLanguage.Chinese;
 
         /// <summary>当前结算货币。</summary>
         public Currency Currency { get; private set; } = Currency.CNY;
@@ -40,7 +40,7 @@ namespace GameEngine
         }
 
         /// <summary>外部设置音频语言。</summary>
-        public void SetAudioLanguage(Language audioLanguage)
+        public void SetAudioLanguage(AudioLanguage audioLanguage)
         {
             AudioLanguage = audioLanguage;
         }
@@ -99,22 +99,22 @@ namespace GameEngine
                 return;
             }
 
-            if (EnumUtility.TryParseEnum(config.region, out Region region))
+            if (EnumUtility.TryParseEnum(config.Region, out Region region))
             {
                 SetRegion(region);
             }
 
-            if (EnumUtility.TryParseEnum(config.language, out Language language))
+            if (EnumUtility.TryParseEnum(config.Language, out Language language))
             {
                 SetLanguage(language);
             }
 
-            if (EnumUtility.TryParseEnum(config.audioLanguage, out Language audioLanguage))
+            if (EnumUtility.TryParseEnum(config.AudioLanguage, out AudioLanguage audioLanguage))
             {
                 SetAudioLanguage(audioLanguage);
             }
 
-            if (EnumUtility.TryParseEnum(config.currency, out Currency currency))
+            if (EnumUtility.TryParseEnum(config.Currency, out Currency currency))
             {
                 SetCurrency(currency);
             }

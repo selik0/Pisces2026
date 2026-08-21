@@ -1,10 +1,23 @@
 <Project>
   <PropertyGroup>
+    <Configurations>Debug;Profile;Release</Configurations>
     <OutputPath>..\..\GameClient\Assets\LogicDll\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <!-- 禁止将 NuGet 包的 dll 复制到输出目录 -->
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);GAME_DEBUG</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Profile'">
+    <DefineConstants>$(DefineConstants);GAME_DEBUG;GAME_PROFILE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>$(DefineConstants);GAME_RELEASE</DefineConstants>
   </PropertyGroup>
 
   <!-- 构建时将所有 Reference 和 ProjectReference 标记为不复制到输出目录 -->

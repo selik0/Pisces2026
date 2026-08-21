@@ -9,16 +9,16 @@ namespace GameEngine
     [Serializable]
     public sealed class LocalizationConfig
     {
-        /// <summary>发行地区名称，对应 <see cref="Region"/>，如 "China"。</summary>
-        public string region;
+        /// <summary>发行地区名称，对应 <see cref="GameEngine.Region"/>，如 "China"。</summary>
+        public string Region;
 
-        /// <summary>界面语言名称，对应 <see cref="Language"/>，如 "Chinese"。</summary>
-        public string language;
+        /// <summary>界面语言名称，对应 <see cref="GameEngine.Language"/>，如 "Chinese"。</summary>
+        public string Language;
 
-        /// <summary>音频语言名称，对应 <see cref="Language"/>，如 "Chinese"。</summary>
-        public string audioLanguage;
+        /// <summary>音频语言名称，对应 <see cref="GameEngine.AudioLanguage"/>，如 "Chinese"。</summary>
+        public string AudioLanguage;
 
-        /// <summary>结算货币代码，对应 <see cref="Currency"/>，如 "CNY"。</summary>
-        public string currency;
+        /// <summary>结算货币代码，对应 <see cref="GameEngine.Currency"/>，如 "CNY"。</summary>
+        public string Currency;
     }
 }

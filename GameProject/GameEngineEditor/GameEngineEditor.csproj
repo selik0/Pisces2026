@@ -12,7 +12,7 @@
     <ProjectReference Include="..\GameEngine\GameEngine.csproj">
       <Private>false</Private>
     </ProjectReference>
-    <!-- 显式引用 GameNative 工程，阻止其作为传递引用被复制到 Editor 输出目录 -->
+    <!-- 引用 GameNative 工程，不复制到输出目录 -->
     <ProjectReference Include="..\GameNative\GameNative.csproj">
       <Private>false</Private>
     </ProjectReference>
