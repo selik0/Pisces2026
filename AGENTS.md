@@ -92,14 +92,13 @@ GameEngine --------> GameEngineEditor
 
 Coroutine、FSM、Scene 和 Timer 等系统需要由游戏主循环调用对应的 `Tick`，不能假设它们像 Unity `MonoBehaviour.Update` 一样自动运行。
 
-### 静态入口与单例
+### 子系统入口与单例
 
-框架的每个子系统由两部分组成：`XxxManager` 单例持有全部状态和实现，`XxxSystem` 静态类只做纯转发，供 GameLogic 等外部调用方便捷使用。
+框架子系统由 `XxxManager` 单例持有全部状态和实现，业务层和 GameEngine 内部均直接通过 `XxxManager.Instance` 使用。
 
-- GameEngine 内部实现必须直接使用 `XxxManager.Instance` 单例，禁止经过 `XxxSystem` 静态入口调用。
-- `XxxSystem` 静态类必须保持无状态纯转发，禁止在静态类中新增字段、属性或可变状态。
-- `XxxSystem` 静态类只提供日常业务操作入口，禁止提供 `DestroyAll`、`StopAll`、`ClearAll`、`Reset`、`Shutdown` 等全局清理或重置方法；这类框架生命周期操作需要时通过 `XxxManager` 单例执行。
-- 新增子系统时必须先有 Manager 单例，再按需补充静态门面。
+- 新增子系统时只创建 Manager 单例，不要生成 `XxxSystem` 静态转发类或其他静态门面。
+- 仓库中已有的 `CoroutineSystem`、`EventSystem`、`FsmSystem`、`SceneSystem`、`TimerSystem` 和 `UISystem` 属于历史代码，不应作为新增功能的实现模板。
+- `DestroyAll`、`StopAll`、`ClearAll`、`Reset`、`Shutdown` 等全局清理或重置操作只能由 Manager 提供，并由明确的框架生命周期调用。
 
 ### 日志规范
 
@@ -203,7 +202,6 @@ foreach (Item item in items)
 - 接口使用 `I` 前缀，例如 `IScene`、`IFsm`、`ILogHandler`。
 - 私有实例字段使用 `_camelCase`。
 - 局部变量和参数使用 `camelCase`。
-- 静态系统入口通常命名为 `XxxSystem`。
 - 管理器和调度器使用 `XxxManager`。
 - 句柄类型使用 `XxxHandle`。
 - 避免无意义缩写，名称应表达生命周期和所有权语义。
