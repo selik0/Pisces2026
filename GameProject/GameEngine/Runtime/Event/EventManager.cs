@@ -6,6 +6,8 @@ namespace GameEngine
     /// <summary>
     /// 以 int 类型 EventKey 路由的事件总线，支持零到三个事件参数。
     /// 同一个 EventKey 必须始终使用相同的参数数量和参数类型。
+    /// 监听器回调中禁止 Subscribe / Unsubscribe 修改同一事件的订阅集合（会破坏遍历并抛异常），
+    /// 需要注销的监听器应延迟到 Emit 返回之后处理。
     /// </summary>
     /// <remarks>非线程安全，应仅在 Unity 主线程使用。</remarks>
     public sealed class EventManager : Singleton<EventManager>

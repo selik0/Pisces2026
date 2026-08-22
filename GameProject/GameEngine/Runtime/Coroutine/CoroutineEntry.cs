@@ -113,6 +113,13 @@ namespace GameEngine
                     return true;
                 }
 
+                if (ReferenceEquals(current, NextFrame.Instance))
+                {
+                    // NextFrame 单例是共享状态，由调度器特殊处理为等待下一帧（等价 yield return null），可安全复用。
+                    _waitNextFrame = true;
+                    return true;
+                }
+
                 if (current is IYieldInstruction instruction)
                 {
                     // 自定义等待指令在首次产生时立即推进一次，避免零时长指令额外等待一帧。

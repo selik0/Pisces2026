@@ -170,9 +170,9 @@ namespace GameNative
         // ── StreamingAssets 读取 ──────────────────────────────────────────────
 
         /// <summary>
-        /// 从只读资源目录读取文本。
-        /// Android/WebGL 的 StreamingAssets 无法用 File 直接读取，统一走 UnityWebRequest。
-        /// 阻塞式读取，需在 Unity 主线程调用。
+        /// 从只读资源目录读取文本（同步）。
+        /// 平台限制与异常行为同 <see cref="ReadStreamingBytes"/>；
+        /// Android / WebGL 请使用 <see cref="ReadStreamingTextAsync"/>。
         /// </summary>
         /// <param name="relativePath">相对 StreamingAssets 的路径，例如 "Config/game.json"</param>
         public static string ReadStreamingText(string relativePath, Encoding encoding = null)
@@ -182,45 +182,84 @@ namespace GameNative
         }
 
         /// <summary>
-        /// 从只读资源目录读取二进制数据。
-        /// Android/WebGL 的 StreamingAssets 无法用 File 直接读取，统一走 UnityWebRequest。
-        /// 阻塞式读取，需在 Unity 主线程调用。
+        /// 从只读资源目录读取二进制数据（同步）。
+        /// 仅支持可直接访问文件系统的平台（PC / iOS 等）；
+        /// Android / WebGL 的 StreamingAssets 依赖 UnityWebRequest 且需要主线程推进，
+        /// 同步自旋等待会使请求永远无法完成，请改用 <see cref="ReadStreamingBytesAsync"/>。
         /// </summary>
         /// <param name="relativePath">相对 StreamingAssets 的路径，例如 "Config/game.json"</param>
+        /// <exception cref="NotSupportedException">在 Android / WebGL 上调用时抛出。</exception>
         public static byte[] ReadStreamingBytes(string relativePath)
         {
             string path = ResolveStreamingPath(relativePath);
 
             if (Platform.IsAndroid || Platform.IsWebGL)
             {
-                return ReadViaWebRequest(path);
+                throw new NotSupportedException(
+                    $"Android/WebGL 的 StreamingAssets 无法同步读取: {relativePath}，请使用 ReadStreamingBytesAsync。");
             }
 
             return File.ReadAllBytes(path);
         }
 
-        // ── 私有辅助 ───────────────────────────────────────────────────────────
+        // ── 异步读取（Android / WebGL）────────────────────────────────────────
 
-        /// <summary>通过 UnityWebRequest 阻塞读取资源（用于 Android/WebGL 的 StreamingAssets）</summary>
-        private static byte[] ReadViaWebRequest(string uri)
+        /// <summary>
+        /// 从只读资源目录异步读取二进制数据。
+        /// Android / WebGL 的 StreamingAssets 通过 UnityWebRequest 异步读取，
+        /// 完成回调由 Unity 主线程触发；其他平台直接读取并同步回调。
+        /// </summary>
+        /// <param name="relativePath">相对 StreamingAssets 的路径，例如 "Config/game.json"</param>
+        /// <param name="onSuccess">读取成功回调，参数为文件内容。</param>
+        /// <param name="onError">读取失败回调，参数为异常；可传 null。</param>
+        public static void ReadStreamingBytesAsync(string relativePath, Action<byte[]> onSuccess, Action<Exception> onError)
         {
-            using (var request = UnityWebRequest.Get(uri))
+            string path = ResolveStreamingPath(relativePath);
+
+            if (Platform.IsAndroid || Platform.IsWebGL)
             {
-                var operation = request.SendWebRequest();
-
-                // 阻塞等待完成，同步 API 需要主线程执行
-                while (!operation.isDone)
+                UnityWebRequest request = UnityWebRequest.Get(path);
+                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+                operation.completed += asyncOperation =>
                 {
-                    // 让出当前帧，避免长时间占用主线程
-                }
+                    using (request)
+                    {
+                        if (request.result != UnityWebRequest.Result.Success)
+                        {
+                            onError?.Invoke(new IOException($"读取资源失败: {path}，错误: {request.error}"));
+                            return;
+                        }
 
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    throw new IOException($"读取资源失败: {uri}，错误: {request.error}");
-                }
+                        onSuccess?.Invoke(request.downloadHandler.data);
+                    }
+                };
 
-                return request.downloadHandler.data;
+                return;
             }
+
+            try
+            {
+                onSuccess?.Invoke(File.ReadAllBytes(path));
+            }
+            catch (Exception exception)
+            {
+                onError?.Invoke(exception);
+            }
+        }
+
+        /// <summary>
+        /// 从只读资源目录异步读取文本（默认 UTF-8）。
+        /// 行为与平台限制同 <see cref="ReadStreamingBytesAsync"/>。
+        /// </summary>
+        /// <param name="relativePath">相对 StreamingAssets 的路径，例如 "Config/game.json"</param>
+        /// <param name="onSuccess">读取成功回调，参数为文本内容。</param>
+        /// <param name="onError">读取失败回调，参数为异常；可传 null。</param>
+        /// <param name="encoding">编码，默认 UTF-8。</param>
+        public static void ReadStreamingTextAsync(string relativePath, Action<string> onSuccess, Action<Exception> onError, Encoding encoding = null)
+        {
+            ReadStreamingBytesAsync(relativePath,
+                bytes => onSuccess?.Invoke((encoding ?? Encoding.UTF8).GetString(bytes)),
+                onError);
         }
     }
 }

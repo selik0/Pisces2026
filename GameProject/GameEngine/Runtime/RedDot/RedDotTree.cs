@@ -38,9 +38,10 @@ namespace GameEngine
 
         /// <summary>
         /// 根据 Id 链获取节点，若节点不存在则自动创建整条链上的节点。
+        /// 与 <see cref="TryGetNode"/> 一致，Id 必须大于 <see cref="RootId"/>（0 保留）。
         /// </summary>
         /// <param name="idChain">从根到目标的节点 Id 链，不可为空，且每个 Id 必须大于 0</param>
-        /// <returns>对应的 <see cref="RedDotNode"/></returns>
+        /// <returns>对应的 <see cref="RedDotNode"/>；Id 链非法时记录错误并返回 null</returns>
         public RedDotNode GetNode(params int[] idChain)
         {
             if (idChain == null || idChain.Length == 0)
@@ -48,8 +49,19 @@ namespace GameEngine
                 Log.Error("[RedDotTree] GetNode failed: idChain is null or empty");
                 return null;
             }
-            var current = _root;
-            foreach (var id in idChain)
+
+            // 先整体校验再创建，非法 Id 不会产生部分节点残留
+            for (int i = 0; i < idChain.Length; i++)
+            {
+                if (idChain[i] <= RootId)
+                {
+                    Log.Error($"[RedDotTree] GetNode failed: 非法节点 Id={idChain[i]}，Id 必须大于 {RootId}");
+                    return null;
+                }
+            }
+
+            RedDotNode current = _root;
+            foreach (int id in idChain)
             {
                 current = current.GetOrCreateChild(id);
             }

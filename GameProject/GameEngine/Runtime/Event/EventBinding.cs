@@ -5,6 +5,8 @@ namespace GameEngine
 {
     /// <summary>
     /// 保存同一个 EventKey 下的监听委托，并负责委托类型校验与逐个调用。
+    /// 注意：回调执行期间禁止 Subscribe / Unsubscribe 修改订阅集合，
+    /// 否则遍历时枚举器会抛 InvalidOperationException；需要注销的监听器应延迟到派发结束后处理。
     /// </summary>
     internal sealed class EventBinding
     {
@@ -49,6 +51,9 @@ namespace GameEngine
                 return false;
             }
 
+            // 直接遍历订阅集合，不做快照：
+            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
+            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
             foreach (Delegate callback in _callbacks)
             {
                 try
@@ -71,6 +76,9 @@ namespace GameEngine
                 return false;
             }
 
+            // 直接遍历订阅集合，不做快照：
+            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
+            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
             foreach (Delegate callback in _callbacks)
             {
                 try
@@ -93,6 +101,9 @@ namespace GameEngine
                 return false;
             }
 
+            // 直接遍历订阅集合，不做快照：
+            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
+            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
             foreach (Delegate callback in _callbacks)
             {
                 try
@@ -115,6 +126,9 @@ namespace GameEngine
                 return false;
             }
 
+            // 直接遍历订阅集合，不做快照：
+            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
+            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
             foreach (Delegate callback in _callbacks)
             {
                 try

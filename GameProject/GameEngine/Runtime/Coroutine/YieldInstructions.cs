@@ -126,16 +126,26 @@ namespace GameEngine
     /// yield return NextFrame.Instance;
     /// </code>
     /// </summary>
+    /// <remarks>
+    /// <see cref="Instance"/> 单例由 <see cref="CoroutineEntry"/> 特殊处理为等待下一帧，
+    /// 可被任意协程安全复用；直接 <c>new NextFrame()</c> 作为普通指令使用，同样等待一帧。
+    /// </remarks>
     public sealed class NextFrame : IYieldInstruction
     {
-        /// <summary>单例，避免每次分配</summary>
+        /// <summary>单例，由协程调度器特殊处理，可安全复用。</summary>
         public static readonly NextFrame Instance = new NextFrame();
 
-        private bool _ticked;
+        private int _tickFrame = -1;
 
-        // 注意：每次使用需 new 一个，或由调度器重置；单例版本由调度器特殊处理
-        public bool IsCompleted => _ticked;
+        /// <summary>记录首次 Tick 的帧号，帧号推进到下一帧后视为完成。</summary>
+        public bool IsCompleted => _tickFrame >= 0 && UnityEngine.Time.frameCount > _tickFrame;
 
-        public void Tick() { _ticked = true; }
+        public void Tick()
+        {
+            if (_tickFrame < 0)
+            {
+                _tickFrame = UnityEngine.Time.frameCount;
+            }
+        }
     }
 }
