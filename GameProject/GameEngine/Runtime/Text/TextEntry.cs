@@ -1,3 +1,5 @@
+using System;
+
 namespace GameEngine
 {
     /// <summary>
@@ -39,6 +41,56 @@ namespace GameEngine
         public bool IsValid()
         {
             return ParamCount >= 0 && Content != null;
+        }
+
+        // ── 获取 ─────────────────────────────────────────────────────────────────
+
+        /// <summary>获取文本原文，内容为 null 时返回 "id=xx" 占位文本（不返回 null）。</summary>
+        public string GetText()
+        {
+            return Content ?? $"id={Id}";
+        }
+
+        /// <summary>
+        /// 获取带参数格式化的文本。
+        /// <para>
+        /// 参数数量与 <see cref="ParamCount"/> 不一致时记录警告并继续尝试格式化；
+        /// 格式化抛出异常时返回未格式化原文。
+        /// </para>
+        /// </summary>
+        /// <param name="args">格式化参数，对应内容中的 {0}、{1} … 占位符</param>
+        public string GetText(params object[] args)
+        {
+            if (Content == null)
+            {
+                Log.Error($"[Text] id={Id} 内容为 null，返回占位文本");
+                return $"id={Id}";
+            }
+
+            if (args == null || args.Length == 0)
+            {
+                if (HasParams)
+                {
+                    Log.Warning($"[Text] id={Id} 需要 {ParamCount} 个参数但未传入，返回未格式化文本");
+                }
+
+                return Content;
+            }
+
+            if (args.Length != ParamCount)
+            {
+                Log.Warning($"[Text] id={Id} 参数数量不匹配: 需要 {ParamCount} 个, 传入 {args.Length} 个");
+            }
+
+            try
+            {
+                return string.Format(Content, args);
+            }
+            catch (FormatException ex)
+            {
+                Log.Error($"[Text] id={Id} 格式化失败: \"{Content}\"", ex);
+                return Content;
+            }
         }
     }
 }
