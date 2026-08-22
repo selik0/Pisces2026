@@ -5,19 +5,25 @@ namespace GameEngine
     /// </summary>
     public enum AudioPlayMode
     {
-        /// <summary>播放一次。</summary>
-        PlayOnce,
+        /// <summary>顺序播放一个AudioClip。</summary>
+        Once,
 
-        /// <summary>循环队列，按顺序播放。</summary>
-        LoopSequence,
+        /// <summary>随机播放一个AudioClip。</summary>
+        OnceRandom,
 
-        /// <summary>循环队列，随机播放。</summary>
-        LoopRandom,
+        /// <summary>按AudioClip列表顺序循环播放一次。</summary>
+        OnceSequence,
 
-        /// <summary>随机选择一次并循环播放。</summary>
-        RandomOnceLoop,
+        /// <summary>随机一次播放顺序并播放。</summary>
+        OnceRandomSequence,
 
-        /// <summary>随机播放一次。</summary>
-        PlayOnceRandom,
+        /// <summary>按AudioClip列表顺序循环播放。</summary>
+        SequenceLoop,
+
+        /// <summary>随机选择一次播放顺序并循环播放。</summary>
+        OnceRandomSequenceLoop,
+
+        /// <summary>循环播放，每次随机选择一个AudioClip。</summary>
+        RandomLoop,
     }
 }

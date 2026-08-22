@@ -64,12 +64,12 @@ namespace GameEngine
             _isQuitting = true;
         }
 
-        public void Login()
+        public virtual void Login()
         {
             
         }
 
-        public void Logout()
+        public virtual void Logout()
         {
             
         }
