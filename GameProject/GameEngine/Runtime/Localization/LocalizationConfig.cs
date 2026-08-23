@@ -4,41 +4,38 @@ using UnityEngine;
 
 namespace GameEngine
 {
-    /// <summary>
-    /// 本地化本地配置文件结构。
-    /// 对外属性直接使用枚举；JSON 中保存枚举名称字符串，便于人工编辑，
-    /// 枚举与字符串之间的转换由 <see cref="ISerializationCallbackReceiver"/> 完成。
-    /// </summary>
+    /// <summary>本地化本地配置文件结构：属性使用枚举，JSON 保存枚举名称字符串。</summary>
     [Serializable]
     internal sealed class LocalizationConfig : ISerializationCallbackReceiver
     {
         private const string relativePath = "LocalizationConfig.json";
-        // ── JsonUtility 序列化的字符串字段（字段名即 JSON 键名，保持小写命名惯例）──
 
-        /// <summary>JSON 中的发行地区名称，如 "China"。</summary>
+        // ── JSON 序列化字段（字段名即 JSON 键名）──
+
+        /// <summary>发行地区名称，如 "China"。</summary>
         [SerializeField] private string region;
 
-        /// <summary>JSON 中的界面语言名称，如 "Chinese"。</summary>
+        /// <summary>界面语言名称，如 "Chinese"。</summary>
         [SerializeField] private string language;
 
-        /// <summary>JSON 中的音频语言名称，如 "Chinese"。</summary>
+        /// <summary>音频语言名称，如 "Chinese"。</summary>
         [SerializeField] private string audioLanguage;
 
-        /// <summary>JSON 中的结算货币代码，如 "CNY"。</summary>
+        /// <summary>结算货币代码，如 "CNY"。</summary>
         [SerializeField] private string currency;
 
         // ── 枚举属性 ─────────────────────────────────────────────────────────────
 
-        /// <summary>发行地区；JSON 中未配置或无法解析时为 null。</summary>
+        /// <summary>发行地区。</summary>
         public Region Region { get; private set; }
 
-        /// <summary>界面语言；JSON 中未配置或无法解析时为 null。</summary>
+        /// <summary>界面语言。</summary>
         public Language Language { get; private set; }
 
-        /// <summary>音频语言；JSON 中未配置或无法解析时为 null。</summary>
+        /// <summary>音频语言。</summary>
         public AudioLanguage AudioLanguage { get; private set; }
 
-        /// <summary>结算货币；JSON 中未配置或无法解析时为 null。</summary>
+        /// <summary>结算货币。</summary>
         public Currency Currency { get; private set; }
 
         public LocalizationConfig()
@@ -56,7 +53,7 @@ namespace GameEngine
 
         // ── 序列化回调 ───────────────────────────────────────────────────────────
 
-        /// <summary>序列化前将枚举属性写回字符串字段。</summary>
+        /// <summary>序列化前：枚举写回字符串。</summary>
         public void OnBeforeSerialize()
         {
             region = Region.ToString();
@@ -65,7 +62,7 @@ namespace GameEngine
             currency = Currency.ToString();
         }
 
-        /// <summary>反序列化后将字符串字段解析为枚举属性。</summary>
+        /// <summary>反序列化后：字符串解析为枚举。</summary>
         public void OnAfterDeserialize()
         {
             if (EnumUtility.TryParseEnum(region, out Region _region))
@@ -107,13 +104,13 @@ namespace GameEngine
 
         // ── 本地配置读取 ────────────────────────────────────────────────────────
 
-        /// <summary>获取本地化配置文件所在根目录：编辑器使用 EditorData 目录，其他平台使用持久化目录。</summary>
+        /// <summary>本地化配置文件根目录（编辑器用 EditorData，其他平台用持久化目录）。</summary>
         private static string GetConfigRoot()
         {
             return Application.isEditor ? GameNative.FileSystem.EditorDataPath : GameNative.FileSystem.PersistentRoot;
         }
 
-        /// <summary>读取本地化配置并应用到当前管理器。</summary>
+        /// <summary>读取本地化配置，文件不存在或失败时返回 null。</summary>
         public static LocalizationConfig LoadConfig()
         {
             string path = Path.Combine(GetConfigRoot(), relativePath);
@@ -126,8 +123,7 @@ namespace GameEngine
 
             try
             {
-                LocalizationConfig config = GameNative.FileSystem.ReadJson<LocalizationConfig>(path);
-                return config;
+                return GameNative.FileSystem.ReadJson<LocalizationConfig>(path);
             }
             catch (Exception e)
             {
@@ -136,8 +132,8 @@ namespace GameEngine
             }
         }
 
-        /// <summary>将本地化配置保存到本地 JSON 文件。</summary>
-        /// <param name="config">要保存的配置，不可为 null</param>
+        /// <summary>保存本地化配置到本地 JSON。</summary>
+        /// <param name="config">配置，不可为 null</param>
         internal static void SaveConfig(LocalizationConfig config)
         {
             if (config == null)

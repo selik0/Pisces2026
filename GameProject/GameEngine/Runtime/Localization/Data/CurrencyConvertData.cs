@@ -2,37 +2,16 @@ using System.Collections.Generic;
 
 namespace GameEngine
 {
-    /// <summary>
-    /// 货币转换表抽象基类，实现 <see cref="ILocalization{TEnum}"/>（<see cref="GameEngine.Currency"/>）。
-    /// <para>
-    /// 保存所有货币转换数据，维护货币 id 到 <see cref="CurrencyEntry"/> 的映射，
-    /// 提供按 id 获取显示金额的能力。本类不可直接实例化，具体表由派生类创建并持有，
-    /// 转换数据通过 <see cref="AddCurrencies"/> 批量注册，本类不负责解析转换表文件，
-    /// 也不提供移除接口。
-    /// </para>
-    ///
-    /// <para><b>约定</b></para>
-    /// <list type="bullet">
-    ///   <item>id 重复注册时记录警告并以新条目覆盖</item>
-    ///   <item>非法条目（显示比例为非正值）记录错误并跳过</item>
-    /// </list>
-    /// </summary>
-    public abstract class CurrencyConvertTable : LocalizationData<Currency>
+    /// <summary>货币转换数据抽象基类，维护货币 id 到 <see cref="CurrencyEntry"/> 的映射。</summary>
+    public abstract class CurrencyConvertData : LocalizationData<Currency>
     {
-        // ── 状态 ─────────────────────────────────────────────────────────────────
-
         private readonly Dictionary<uint, CurrencyEntry> _entries = new Dictionary<uint, CurrencyEntry>();
 
-        /// <summary>当前已注册的货币转换数据数量。</summary>
+        /// <summary>已注册的货币转换数据数量。</summary>
         public int Count => _entries.Count;
 
-        // ── 注册 ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 批量注册货币转换数据，通常由配置加载流程调用。
-        /// <para>id 重复时记录警告并以新条目覆盖，非法条目记录错误并跳过。</para>
-        /// </summary>
-        /// <param name="entries">货币转换条目集合，不可为 null</param>
+        /// <summary>批量注册货币转换数据，重复 id 覆盖，非法条目跳过。</summary>
+        /// <param name="entries">货币转换条目集合</param>
         public void AddCurrencies(IEnumerable<CurrencyEntry> entries)
         {
             if (entries == null)
@@ -57,7 +36,7 @@ namespace GameEngine
             Log.Debug($"[Currency] AddCurrencies 完成: total={total} success={success}");
         }
 
-        /// <summary>注册单条货币转换数据，供 <see cref="AddCurrencies"/> 内部复用。</summary>
+        /// <summary>注册单条货币转换数据。</summary>
         private bool AddCurrency(CurrencyEntry entry)
         {
             if (entry == null)
@@ -83,11 +62,8 @@ namespace GameEngine
 
         // ── 查询 ─────────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// 获取指定 id 的货币转换条目。
-        /// </summary>
+        /// <summary>获取指定 id 的显示金额，不存在时返回 0。</summary>
         /// <param name="id">货币 id</param>
-        /// <returns>货币转换条目；不存在时记录警告并返回 null</returns>
         public float GetCurrency(uint id)
         {
             if (_entries.TryGetValue(id, out CurrencyEntry entry))

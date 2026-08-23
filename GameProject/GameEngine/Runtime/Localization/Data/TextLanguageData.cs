@@ -3,35 +3,16 @@ using System.Collections.Generic;
 
 namespace GameEngine
 {
-    /// <summary>
-    /// 文本表抽象基类，实现 <see cref="ILocalization{TEnum}"/>（<see cref="GameEngine.Language"/>）。
-    /// <para>
-    /// 维护文本 id 到 <see cref="TextEntry"/> 的映射，提供按 id 获取文本、
-    /// 带参数格式化文本的能力。本类不可直接实例化，具体表由派生类创建并持有，
-    /// 文本数据通过 <see cref="AddTexts"/> 批量注册，本类不负责解析文本表文件，
-    /// 也不提供移除接口。
-    /// </para>
-    ///
-    /// <para><b>约定</b></para>
-    /// <list type="bullet">
-    ///   <item>id 重复注册时记录警告并以新条目覆盖</item>
-    ///   <item>非法条目（参数数量为负或内容为 null）记录错误并跳过</item>
-    ///   <item>带参获取时校验参数数量与 <see cref="TextEntry.ParamCount"/> 是否一致</item>
-    ///   <item>格式化失败（占位符语法错误或越界）时记录异常并返回未格式化原文</item>
-    /// </list>
-    /// </summary>
-    public abstract class TextLanguageTable : LocalizationData<Language>
+    /// <summary>文本数据抽象基类，维护文本 id 到 <see cref="TextEntry"/> 的映射。</summary>
+    public abstract class TextLanguageData : LocalizationData<Language>
     {
         private readonly Dictionary<uint, TextEntry> _texts = new Dictionary<uint, TextEntry>();
 
-        /// <summary>当前已注册的文本数量。</summary>
+        /// <summary>已注册文本数量。</summary>
         public int Count => _texts.Count;
 
-        /// <summary>
-        /// 批量注册文本，通常由配置加载流程调用。
-        /// <para>id 重复时记录警告并以新条目覆盖，非法条目记录错误并跳过。</para>
-        /// </summary>
-        /// <param name="entries">文本条目集合，不可为 null</param>
+        /// <summary>批量注册文本，重复 id 覆盖，非法条目跳过。</summary>
+        /// <param name="entries">文本条目集合</param>
         public void AddTexts(IEnumerable<TextEntry> entries)
         {
             if (entries == null)
@@ -56,7 +37,7 @@ namespace GameEngine
             Log.Debug($"[Text] AddTexts 完成: total={total} success={success}");
         }
 
-        /// <summary>注册单条文本，供 <see cref="AddTexts"/> 内部复用。</summary>
+        /// <summary>注册单条文本。</summary>
         private bool AddText(TextEntry entry)
         {
             if (entry == null)
@@ -88,11 +69,8 @@ namespace GameEngine
 
         // ── 查询 ─────────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// 获取指定 id 的文本原文，不做格式化。
-        /// </summary>
+        /// <summary>获取指定 id 的文本原文，不存在时返回 null。</summary>
         /// <param name="id">文本 id</param>
-        /// <returns>文本内容；不存在时记录警告并返回 null</returns>
         public string GetText(uint id)
         {
             if (_texts.TryGetValue(id, out TextEntry entry))
@@ -104,16 +82,9 @@ namespace GameEngine
             return null;
         }
 
-        /// <summary>
-        /// 获取指定 id 的文本并用参数格式化。
-        /// <para>
-        /// 参数数量与 <see cref="TextEntry.ParamCount"/> 不一致时记录警告，
-        /// 并继续尝试格式化；格式化抛出异常时返回未格式化原文。
-        /// </para>
-        /// </summary>
+        /// <summary>获取带参数格式化的文本，不存在时返回 null。</summary>
         /// <param name="id">文本 id</param>
-        /// <param name="args">格式化参数，对应内容中的 {0}、{1} … 占位符</param>
-        /// <returns>格式化后的文本；id 不存在时返回 null</returns>
+        /// <param name="args">格式化参数，对应 {0}、{1} … 占位符</param>
         public string GetText(uint id, params object[] args)
         {
             if (!_texts.TryGetValue(id, out TextEntry entry))

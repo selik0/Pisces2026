@@ -3,45 +3,41 @@ using UnityEngine;
 
 namespace GameEngine
 {
-    /// <summary>
-    /// 精灵语言助手：静态持有当前使用的 <see cref="SpriteLanguageTable"/>（通过 <see cref="Initialize"/> 注入），
-    /// 提供界面语言读写与按名称获取本地化精灵的能力。
-    /// </summary>
+    /// <summary>精灵语言助手，静态持有 <see cref="SpriteLanguageData"/>，提供语言读写与本地化精灵获取。</summary>
     public static class SpriteUtility
     {
-        private static SpriteLanguageTable _spriteLanguageTable;
+        private static SpriteLanguageData _spriteLanguageData;
         private static Language _language;
 
-        /// <summary>初始化精灵语言表，通常由配置加载流程调用。</summary>
-        /// <param name="spriteLanguageTable">精灵语言表实例</param>
-        /// <exception cref="ArgumentNullException">spriteLanguageTable 为 null</exception>
-        public static void Initialize(SpriteLanguageTable spriteLanguageTable)
+        /// <summary>初始化精灵语言数据。</summary>
+        /// <param name="spriteLanguageData">精灵语言数据</param>
+        /// <exception cref="ArgumentNullException">spriteLanguageData 为 null</exception>
+        public static void Initialize(SpriteLanguageData spriteLanguageData)
         {
-            if (spriteLanguageTable == null)
+            if (spriteLanguageData == null)
             {
-                throw new ArgumentNullException(nameof(spriteLanguageTable), "[Sprite] SpriteUtility.Initialize failed: spriteLanguageTable is null");
+                throw new ArgumentNullException(nameof(spriteLanguageData), "[Sprite] SpriteUtility.Initialize failed: spriteLanguageData is null");
             }
 
-            _spriteLanguageTable = spriteLanguageTable;
-            _spriteLanguageTable.SetLanguage(_language);
+            _spriteLanguageData = spriteLanguageData;
+            _spriteLanguageData.SetLanguage(_language);
         }
 
         /// <summary>设置当前界面语言。</summary>
-        /// <param name="language">界面语言</param>
         public static void SetLanguage(Language language)
         {
             _language = language;
-            _spriteLanguageTable?.SetLanguage(language);
+            _spriteLanguageData?.SetLanguage(language);
         }
 
-        /// <summary>获取指定名称的本地化精灵（未完成实现，当前恒返回 null）。</summary>
+        /// <summary>获取指定名称的本地化精灵（未实现）。</summary>
         /// <param name="name">精灵名称</param>
         public static Sprite GetSprite(string name)
         {
             string realName = name;
-            if (_spriteLanguageTable != null)
+            if (_spriteLanguageData != null)
             {
-                realName = _spriteLanguageTable.GetSpriteName(name);
+                realName = _spriteLanguageData.GetSpriteName(name);
             }
 
             return null;

@@ -7,7 +7,7 @@ namespace GameEngine
 {
     /// <summary>
     /// 音频管理器单例，按 <see cref="AudioEntry"/> 配置播放 BGM 与音效。
-    /// 音频配置由内部 <see cref="AudioLanguageTable"/> 保存（未初始化前为空），通过 <see cref="InitializeData"/> 注入。
+    /// 音频配置由内部 <see cref="AudioLanguageData"/> 保存（未初始化前为空），通过 <see cref="InitializeData"/> 注入。
     /// 基于 <see cref="MonoSingleton{T}"/> 自动创建常驻实例，自身 Update 驱动，不依赖主循环 Tick。
     /// 支持 <see cref="AudioPlayMode"/> 各播放模式、随机音量/音调与剪辑权重、淡入淡出、同层抢占、
     /// 分组混音与 BGM 独立通道；每个播放中的音频对应一个 <see cref="SoundInstance"/>。
@@ -29,7 +29,7 @@ namespace GameEngine
         private AudioSource _bgmSource;
         private SoundInstance _bgmInstance;
         private Func<string, AudioClip> _clipLoader;
-        private AudioLanguageTable _table;
+        private AudioLanguageData _data;
 
         /// <summary>全局音量缩放，作用于所有播放实例。</summary>
         public float MasterVolume { get; set; } = 1f;
@@ -55,26 +55,27 @@ namespace GameEngine
         public void SetLanguage(AudioLanguage language)
         {
             Language = language;
-            _table?.SetLanguage(language);
+            _data?.SetLanguage(language);
         }
 
-        /// <summary>初始化音频表：将具体音频表赋给 Manager 并加载其数据。</summary>
-        /// <param name="table">音频表，不可为 null</param>
-        public void InitializeData(AudioLanguageTable table)
+        /// <summary>初始化音频数据：将具体音频数据赋给 Manager 并加载其数据。</summary>
+        /// <param name="data">音频数据，不可为 null</param>
+        public void InitializeData(AudioLanguageData data)
         {
-            if (table == null)
+            if (data == null)
             {
-                Log.Error("[Audio] InitializeData failed: table is null");
+                Log.Error("[Audio] InitializeData failed: data is null");
                 return;
             }
-            _table = table;
-            _table.SetLanguage(Language);
+
+            _data = data;
+            _data.SetLanguage(Language);
         }
 
         /// <summary>获取指定 id 的音频配置，未注册时记录警告并返回 null。</summary>
         public AudioEntry GetEntry(uint id)
         {
-            return _table?.GetEntry(id);
+            return _data?.GetEntry(id);
         }
 
         // ── 生命周期 ───────────────────────────────────────────────────────────
