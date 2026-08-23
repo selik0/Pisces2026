@@ -74,7 +74,7 @@ namespace GameEngine
         /// <summary>获取指定 id 的音频配置，未注册时记录警告并返回 null。</summary>
         public AudioEntry GetEntry(uint id)
         {
-            return _table?.GetAudio(id);
+            return _table?.GetEntry(id);
         }
 
         // ── 生命周期 ───────────────────────────────────────────────────────────

@@ -104,21 +104,21 @@ namespace GameEngine
         /// </summary>
         /// <param name="id">音频 id</param>
         /// <returns>音频条目；不存在或资产已销毁时记录警告并返回 null</returns>
-        public AudioEntry GetAudio(uint id)
+        public AudioEntry GetEntry(uint id)
         {
             if (_audios.TryGetValue(id, out AudioEntry entry))
             {
                 // 资产可能在注册后被外部销毁，按 Unity 假 null 语义再校验一次
                 if (entry == null)
                 {
-                    Log.Error($"[Audio] GetAudio failed: id={id} 条目资产已销毁");
+                    Log.Error($"[Audio] GetEntry failed: id={id} 条目资产已销毁");
                     return null;
                 }
 
                 return entry;
             }
 
-            Log.Warning($"[Audio] GetAudio failed: id={id} not found");
+            Log.Warning($"[Audio] GetEntry failed: id={id} not found");
             return null;
         }
     }
