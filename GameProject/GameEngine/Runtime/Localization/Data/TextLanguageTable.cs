@@ -20,32 +20,12 @@ namespace GameEngine
     ///   <item>格式化失败（占位符语法错误或越界）时记录异常并返回未格式化原文</item>
     /// </list>
     /// </summary>
-    public abstract class TextLanguageTable : ILocalization<Language>
+    public abstract class TextLanguageTable : LocalizationData<Language>
     {
-        // ── 状态 ─────────────────────────────────────────────────────────────────
-
         private readonly Dictionary<uint, TextEntry> _texts = new Dictionary<uint, TextEntry>();
 
         /// <summary>当前已注册的文本数量。</summary>
         public int Count => _texts.Count;
-
-        // ── 本地化 ───────────────────────────────────────────────────────────────
-
-        /// <summary>当前界面语言。</summary>
-        public Language Language { get; protected set; }
-
-        /// <summary>设置当前界面语言。</summary>
-        /// <param name="language">界面语言</param>
-        public void SetLanguage(Language language)
-        {
-            Language = language;
-            InitializeData();
-        }
-
-        /// <summary>初始化表数据，子类可重写以加载各自的数据。</summary>
-        public abstract void InitializeData();
-
-        // ── 注册 ─────────────────────────────────────────────────────────────────
 
         /// <summary>
         /// 批量注册文本，通常由配置加载流程调用。

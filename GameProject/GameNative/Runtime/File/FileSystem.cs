@@ -140,6 +140,39 @@ namespace GameNative
             return File.ReadAllBytes(path);
         }
 
+        // ── JSON 读写 ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 读取 JSON 文件并反序列化为指定类型，文件不存在时返回 default(T)。
+        /// 反序列化使用 <see cref="JsonUtility"/>，JSON 格式错误不会抛异常（返回默认值）；
+        /// 读取过程抛出的 IO 异常向上抛出，由调用方记录日志。
+        /// </summary>
+        /// <typeparam name="T">目标类型，需标记 [Serializable] 且字段可被 JsonUtility 序列化</typeparam>
+        /// <param name="path">文件完整路径</param>
+        public static T ReadJson<T>(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return default(T);
+            }
+
+            string json = File.ReadAllText(path, Encoding.UTF8);
+            return JsonUtility.FromJson<T>(json);
+        }
+
+        /// <summary>
+        /// 将对象序列化为 JSON 并写入文件（默认 UTF-8，覆盖写）。
+        /// </summary>
+        /// <typeparam name="T">对象类型，需标记 [Serializable] 且字段可被 JsonUtility 序列化</typeparam>
+        /// <param name="path">文件完整路径</param>
+        /// <param name="value">要写入的对象</param>
+        /// <param name="prettyPrint">是否格式化输出，默认 true，便于人工编辑</param>
+        public static void WriteJson<T>(string path, T value, bool prettyPrint = true)
+        {
+            EnsureFileDirectory(path);
+            File.WriteAllText(path, JsonUtility.ToJson(value, prettyPrint), Encoding.UTF8);
+        }
+
         // ── 持久化目录便捷读写 ─────────────────────────────────────────────────
 
         /// <summary>写入文本到持久化目录</summary>

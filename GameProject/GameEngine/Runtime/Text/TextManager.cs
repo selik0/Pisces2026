@@ -33,6 +33,7 @@ namespace GameEngine
             }
 
             _table = table;
+            _table.SetLanguage(Language);
             _table.InitializeData();
         }
 

@@ -68,7 +68,7 @@ namespace GameEngine
                 return;
             }
             _table = table;
-            _table.InitializeData();
+            _table.SetLanguage(Language);
         }
 
         /// <summary>获取指定 id 的音频配置，未注册时记录警告并返回 null。</summary>

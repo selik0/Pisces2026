@@ -8,6 +8,8 @@ namespace GameEngine
     /// <typeparam name="TEnum">界面语言枚举类型</typeparam>
     public interface ILocalization<TEnum> where TEnum : Enum
     {
+        bool IsInitialized { get; }
+        
         /// <summary>当前界面语言，可直接读写。</summary>
         TEnum Language { get; }
 

@@ -17,7 +17,7 @@ namespace GameEngine
     ///   <item><see cref="AudioEntry"/> 为 Unity 对象，判空遵循 Unity 假 null 语义</item>
     /// </list>
     /// </summary>
-    public abstract class AudioLanguageTable : ILocalization<AudioLanguage>
+    public abstract class AudioLanguageTable : LocalizationData<AudioLanguage>
     {
         // ── 状态 ─────────────────────────────────────────────────────────────────
 
@@ -25,22 +25,6 @@ namespace GameEngine
 
         /// <summary>当前已注册的音频数量。</summary>
         public int Count => _audios.Count;
-
-        // ── 本地化 ───────────────────────────────────────────────────────────────
-
-        /// <summary>当前音频语言。</summary>
-        public AudioLanguage Language { get; protected set; }
-
-        /// <summary>设置当前音频语言。</summary>
-        /// <param name="language">音频语言</param>
-        public void SetLanguage(AudioLanguage language)
-        {
-            Language = language;
-            InitializeData();
-        }
-
-        /// <summary>初始化表数据，子类可重写以加载各自的数据。</summary>
-        public abstract void InitializeData();
 
         // ── 注册 ─────────────────────────────────────────────────────────────────
 

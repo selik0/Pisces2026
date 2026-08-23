@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace GameEngine
 {
     /// <summary>
-    /// 货币转换表抽象基类，实现 <see cref="ILocalization{TEnum}"/>（<see cref="Currency"/>）。
+    /// 货币转换表抽象基类，实现 <see cref="ILocalization{TEnum}"/>（<see cref="GameEngine.Currency"/>）。
     /// <para>
     /// 保存所有货币转换数据，维护货币 id 到 <see cref="CurrencyEntry"/> 的映射，
     /// 提供按 id 获取显示金额的能力。本类不可直接实例化，具体表由派生类创建并持有，
@@ -17,7 +17,7 @@ namespace GameEngine
     ///   <item>非法条目（显示比例为非正值）记录错误并跳过</item>
     /// </list>
     /// </summary>
-    public abstract class CurrencyConvertTable : ILocalization<Currency>
+    public abstract class CurrencyConvertTable : LocalizationData<Currency>
     {
         // ── 状态 ─────────────────────────────────────────────────────────────────
 
@@ -25,22 +25,6 @@ namespace GameEngine
 
         /// <summary>当前已注册的货币转换数据数量。</summary>
         public int Count => _entries.Count;
-
-        // ── 本地化 ───────────────────────────────────────────────────────────────
-
-        /// <summary>当前货币类型。</summary>
-        public Currency Language { get; protected set; }
-
-        /// <summary>设置当前货币类型。</summary>
-        /// <param name="currency">货币类型</param>
-        public void SetLanguage(Currency currency)
-        {
-            Language = currency;
-            InitializeData();
-        }
-
-        /// <summary>初始化表数据，子类可重写以加载各自的数据。</summary>
-        public abstract void InitializeData();
 
         // ── 注册 ─────────────────────────────────────────────────────────────────
 
