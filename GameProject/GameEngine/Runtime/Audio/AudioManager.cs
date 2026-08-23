@@ -7,6 +7,7 @@ namespace GameEngine
 {
     /// <summary>
     /// 音频管理器单例，按 <see cref="AudioEntry"/> 配置播放 BGM 与音效。
+    /// 音频配置由内部 <see cref="AudioLanguageTable"/> 保存（未初始化前为空），通过 <see cref="InitializeData"/> 注入。
     /// 基于 <see cref="MonoSingleton{T}"/> 自动创建常驻实例，自身 Update 驱动，不依赖主循环 Tick。
     /// 支持 <see cref="AudioPlayMode"/> 各播放模式、随机音量/音调与剪辑权重、淡入淡出、同层抢占、
     /// 分组混音与 BGM 独立通道；每个播放中的音频对应一个 <see cref="SoundInstance"/>。
@@ -19,7 +20,6 @@ namespace GameEngine
 
         // ── 状态 ───────────────────────────────────────────────────────────────
 
-        private readonly Dictionary<uint, AudioEntry> _entries = new Dictionary<uint, AudioEntry>();
         private readonly Dictionary<AudioMixType, AudioMixerGroup> _mixerGroups = new Dictionary<AudioMixType, AudioMixerGroup>();
         private readonly Dictionary<AudioMixType, float> _groupVolumes = new Dictionary<AudioMixType, float>();
         private readonly Dictionary<string, AudioClip> _clipCache = new Dictionary<string, AudioClip>();
@@ -29,6 +29,7 @@ namespace GameEngine
         private AudioSource _bgmSource;
         private SoundInstance _bgmInstance;
         private Func<string, AudioClip> _clipLoader;
+        private AudioLanguageTable _table;
 
         /// <summary>全局音量缩放，作用于所有播放实例。</summary>
         public float MasterVolume { get; set; } = 1f;
@@ -45,6 +46,36 @@ namespace GameEngine
 
         /// <summary>当前活跃的播放实例数量（含 BGM）。</summary>
         public int PlayingCount => _instances.Count;
+
+        /// <summary>当前音频语言。</summary>
+        public AudioLanguage Language { get; private set; }
+
+        /// <summary>设置当前音频语言。</summary>
+        /// <param name="language">音频语言</param>
+        public void SetLanguage(AudioLanguage language)
+        {
+            Language = language;
+            _table?.SetLanguage(language);
+        }
+
+        /// <summary>初始化音频表：将具体音频表赋给 Manager 并加载其数据。</summary>
+        /// <param name="table">音频表，不可为 null</param>
+        public void InitializeData(AudioLanguageTable table)
+        {
+            if (table == null)
+            {
+                Log.Error("[Audio] InitializeData failed: table is null");
+                return;
+            }
+            _table = table;
+            _table.InitializeData();
+        }
+
+        /// <summary>获取指定 id 的音频配置，未注册时记录警告并返回 null。</summary>
+        public AudioEntry GetEntry(uint id)
+        {
+            return _table?.GetAudio(id);
+        }
 
         // ── 生命周期 ───────────────────────────────────────────────────────────
 
@@ -78,59 +109,6 @@ namespace GameEngine
             _bgmInstance = null;
             _bgmSource = null;
             base.OnDestroy();
-        }
-
-        // ── 注册 ───────────────────────────────────────────────────────────────
-
-        /// <summary>注册一条音频配置，id 重复时覆盖旧条目并记录警告。</summary>
-        public void Register(AudioEntry entry)
-        {
-            if (entry == null)
-            {
-                Log.Error("[AudioManager] Register 失败：entry 为 null。");
-                return;
-            }
-
-            if (_entries.TryGetValue(entry.Id, out AudioEntry old))
-            {
-                Log.Warning($"[AudioManager] id={entry.Id} 已存在（{old.name}），新条目 {entry.name} 覆盖旧条目。");
-            }
-
-            _entries[entry.Id] = entry;
-            Log.Debug($"[AudioManager] 注册音频 id={entry.Id} name={entry.name}");
-        }
-
-        /// <summary>注销指定音频配置。</summary>
-        public bool Unregister(uint id)
-        {
-            if (_entries.Remove(id))
-            {
-                Log.Debug($"[AudioManager] 注销音频 id={id}");
-                return true;
-            }
-
-            Log.Warning($"[AudioManager] 注销失败：未找到 id={id}。");
-            return false;
-        }
-
-        /// <summary>清空全部音频注册并停止所有播放。</summary>
-        public void Clear()
-        {
-            StopAll();
-            _entries.Clear();
-            Log.Debug("[AudioManager] 已清空全部音频注册。");
-        }
-
-        /// <summary>获取已注册的音频配置，未注册时记录警告并返回 null。</summary>
-        public AudioEntry GetEntry(uint id)
-        {
-            if (_entries.TryGetValue(id, out AudioEntry entry))
-            {
-                return entry;
-            }
-
-            Log.Warning($"[AudioManager] 未找到音频条目 id={id}，请先 Register。");
-            return null;
         }
 
         // ── 混音 ───────────────────────────────────────────────────────────────
