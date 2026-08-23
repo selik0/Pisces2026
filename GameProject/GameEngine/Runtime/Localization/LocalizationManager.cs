@@ -38,18 +38,22 @@ namespace GameEngine
         public void SetLanguage(Language language)
         {
             Language = language;
+            TextManager.Instance.SetLanguage(language);
+            SpriteUtility.SetLanguage(language);
         }
 
         /// <summary>设置音频语言。</summary>
         public void SetAudioLanguage(AudioLanguage audioLanguage)
         {
             AudioLanguage = audioLanguage;
+            AudioManager.Instance.SetLanguage(audioLanguage);
         }
 
         /// <summary>设置结算货币。</summary>
         public void SetCurrency(Currency currency)
         {
             Currency = currency;
+            CurrencyUtility.SetLanguage(currency);
         }
 
         /// <summary>应用本地化配置。</summary>
