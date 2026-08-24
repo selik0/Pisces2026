@@ -70,6 +70,7 @@ namespace GameEngine
             SetLanguage(config.Language);
             SetAudioLanguage(config.AudioLanguage);
             SetCurrency(config.Currency);
+            TextManager.Instance.IsNeedRestart = config.IsNeedRestart;
         }
     }
 }

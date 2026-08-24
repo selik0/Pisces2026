@@ -141,7 +141,7 @@ namespace GameEngine
         }
 
         /// <summary>获取时间戳所在周周一 00:00:00 的 Unix 秒时间戳。</summary>
-        private static long GetWeekStartTimestamp(long timestamp, bool isUtc)
+        public static long GetWeekStartTimestamp(long timestamp, bool isUtc)
         {
             DateTime localTime = ToServerTime(timestamp, isUtc);
             int daysFromMonday = ((int)localTime.DayOfWeek + 6) % 7;
@@ -149,13 +149,13 @@ namespace GameEngine
         }
 
         /// <summary>将 Unix 秒时间戳转换为服务器时区当地时间。</summary>
-        private static DateTime ToServerTime(long timestamp, bool isUtc)
+        public static DateTime ToServerTime(long timestamp, bool isUtc)
         {
             return UnixEpoch.AddSeconds(timestamp + (isUtc ? _timezoneOffsetSeconds : 0));
         }
 
         /// <summary>将服务器时区当地时间转换为 Unix 秒时间戳。</summary>
-        private static long ToTimestamp(DateTime serverTime, bool isUtc)
+        public static long ToTimestamp(DateTime serverTime, bool isUtc)
         {
             return checked((long)(serverTime - UnixEpoch).TotalSeconds) - (isUtc ? _timezoneOffsetSeconds : 0);
         }

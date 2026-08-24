@@ -10,16 +10,28 @@ namespace GameEngine
         private TextLanguageData _data;
         private FontLanguageConfig _fontConfig;
         private readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>();
+
+        /// <summary>切换界面语言后是否标记客户端需要重启，由业务层读取并提示用户。</summary>
+        public bool IsNeedRestart { get; set; }
+
         // ── 本地化 ───────────────────────────────────────────────────────────────
 
         /// <summary>当前界面语言。</summary>
-        public Language Language { get; private set; }
+        public Language Language { get; private set; } = Language.Chinese;
 
         /// <summary>设置当前界面语言。</summary>
         public void SetLanguage(Language language)
         {
+            if (Language == language)
+            {
+                return;
+            }
             Language = language;
             _data?.SetLanguage(language);
+            if (!IsNeedRestart)
+            {
+                TextUpdateRegistry.UpdateAll();
+            }
         }
 
         /// <summary>初始化文本数据。</summary>
@@ -99,7 +111,11 @@ namespace GameEngine
                 }
                 _fontCache[entry.TargetFontPath] = font;
             }
-            text.ChangeFont(font, entry);
+            
+            if (font.name != text.OriginalFontName)
+            {
+                text.ChangeFont(font, entry);
+            }
         }
     }
 }

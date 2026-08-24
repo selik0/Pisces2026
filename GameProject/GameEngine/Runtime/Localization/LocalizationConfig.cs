@@ -24,6 +24,9 @@ namespace GameEngine
         /// <summary>结算货币代码，如 "CNY"。</summary>
         [SerializeField] private string currency;
 
+        /// <summary>界面语言变化后是否需要提示用户重启客户端。</summary>
+        [SerializeField] private bool isNeedRestart;
+
         // ── 枚举属性 ─────────────────────────────────────────────────────────────
 
         /// <summary>发行地区。</summary>
@@ -38,12 +41,16 @@ namespace GameEngine
         /// <summary>结算货币。</summary>
         public Currency Currency { get; private set; }
 
+        /// <summary>界面语言变化后是否标记客户端需要重启。</summary>
+        public bool IsNeedRestart => isNeedRestart;
+
         public LocalizationConfig()
         {
             Region = Region.China;
             Language = Language.Chinese;
             AudioLanguage = AudioLanguage.Chinese;
             Currency = Currency.CNY;
+            isNeedRestart = false;
 
             region = Region.ToString();
             language = Language.ToString();
