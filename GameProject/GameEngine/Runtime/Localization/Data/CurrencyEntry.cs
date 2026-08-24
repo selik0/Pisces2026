@@ -25,7 +25,7 @@ namespace GameEngine
         }
 
         /// <summary>获取显示金额，比例非法时返回 0。</summary>
-        public float GetDisplayAmount()
+        public float GetMoney()
         {
             if (!IsValid())
             {

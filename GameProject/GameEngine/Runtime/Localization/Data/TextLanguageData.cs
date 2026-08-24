@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace GameEngine
 {
@@ -75,7 +76,7 @@ namespace GameEngine
         {
             if (_texts.TryGetValue(id, out TextEntry entry))
             {
-                return entry.Content;
+                return entry.GetText(id);
             }
 
             Log.Warning($"[Text] GetText failed: id={id} not found");
@@ -87,36 +88,13 @@ namespace GameEngine
         /// <param name="args">格式化参数，对应 {0}、{1} … 占位符</param>
         public string GetText(uint id, params object[] args)
         {
-            if (!_texts.TryGetValue(id, out TextEntry entry))
+            if (_texts.TryGetValue(id, out TextEntry entry))
             {
-                Log.Warning($"[Text] GetText failed: id={id} not found");
-                return null;
+                return entry.GetText(id, args);
             }
 
-            if (args == null || args.Length == 0)
-            {
-                if (entry.HasParams)
-                {
-                    Log.Warning($"[Text] id={id} 需要 {entry.ParamCount} 个参数但未传入，返回未格式化文本");
-                }
-
-                return entry.Content;
-            }
-
-            if (args.Length != entry.ParamCount)
-            {
-                Log.Warning($"[Text] id={id} 参数数量不匹配: 需要 {entry.ParamCount} 个, 传入 {args.Length} 个");
-            }
-
-            try
-            {
-                return string.Format(entry.Content, args);
-            }
-            catch (FormatException ex)
-            {
-                Log.Error($"[Text] id={id} 格式化失败: \"{entry.Content}\"", ex);
-                return entry.Content;
-            }
+            Log.Warning($"[Text] GetText failed: id={id} not found");
+            return null;
         }
     }
 }

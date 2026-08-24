@@ -23,17 +23,6 @@ namespace GameEngine
     /// </remarks>
     public static class TimeFormatUtility
     {
-        private static Language _language = Language.Chinese;
-        private static CultureInfo _cultureInfo = CultureInfoUtility.GetCultureInfo(Language.Chinese);
-
-        /// <summary>设置格式化语言，并更新后续所有格式化接口使用的区域性信息。</summary>
-        /// <param name="language">框架支持的界面语言。</param>
-        public static void SetLanguage(Language language)
-        {
-            _language = language;
-            _cultureInfo = CultureInfoUtility.GetCultureInfo(language);
-        }
-
         /// <summary>
         /// 按当前语言格式化日期时间。
         /// </summary>
@@ -41,7 +30,7 @@ namespace GameEngine
         /// <param name="format">标准或自定义 DateTime 格式；为 null 或空字符串时使用 <c>F</c>，即当前语言的短日期和长时间格式。</param>
         public static string Format(DateTime dateTime, string format = "F")
         {
-            return dateTime.ToString(string.IsNullOrEmpty(format) ? "F" : format, _cultureInfo);
+            return dateTime.ToString(string.IsNullOrEmpty(format) ? "F" : format, TextManager.CultureInfo);
         }
 
         /// <summary>

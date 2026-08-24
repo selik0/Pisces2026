@@ -7,8 +7,8 @@ namespace GameEngine
     public static class CurrencyUtility
     {
         private static CurrencyConvertData _data;
-        private static CultureInfo _cultureInfo = CultureInfoUtility.GetCultureInfo(Currency.CNY);
 
+        public static CultureInfo CultureInfo = CultureInfoUtility.GetCultureInfo(Currency.CNY);
         /// <summary>当前货币类型。</summary>
         public static Currency Currency { get; private set; }
 
@@ -34,7 +34,7 @@ namespace GameEngine
         {
             Currency = currency;
             _data?.SetLanguage(currency);
-            _cultureInfo = CultureInfoUtility.GetCultureInfo(currency); 
+            CultureInfo = CultureInfoUtility.GetCultureInfo(currency);
         }
 
         /// <summary>获取指定 id 的显示金额，不存在时返回 0。</summary>
@@ -46,13 +46,13 @@ namespace GameEngine
                 return 0f;
             }
 
-            return _data.GetCurrency(id);
+            return _data.GetMoney(id);
         }
 
         public static string GetMoneyText(uint id)
         {
             var money = GetMoney(id);
-            return money.ToString("C2", _cultureInfo);
+            return money.ToString("C2", CultureInfo);
         }
     }
 }

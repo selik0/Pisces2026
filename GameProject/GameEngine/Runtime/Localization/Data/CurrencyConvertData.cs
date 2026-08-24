@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace GameEngine
 {
@@ -64,11 +65,11 @@ namespace GameEngine
 
         /// <summary>获取指定 id 的显示金额，不存在时返回 0。</summary>
         /// <param name="id">货币 id</param>
-        public float GetCurrency(uint id)
+        public virtual float GetMoney(uint id)
         {
             if (_entries.TryGetValue(id, out CurrencyEntry entry))
             {
-                return entry.GetDisplayAmount();
+                return entry.GetMoney();
             }
 
             Log.Warning($"[Currency] GetCurrency failed: id={id} not found");

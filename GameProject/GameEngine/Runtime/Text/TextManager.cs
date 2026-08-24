@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +13,7 @@ namespace GameEngine
         private FontLanguageConfig _fontConfig;
         private readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>();
 
+        public static CultureInfo CultureInfo = CultureInfoUtility.GetCultureInfo(Language.Chinese);
         /// <summary>切换界面语言后是否标记客户端需要重启，由业务层读取并提示用户。</summary>
         public bool IsNeedRestart { get; set; }
 
@@ -27,6 +30,7 @@ namespace GameEngine
                 return;
             }
             Language = language;
+            CultureInfo = CultureInfoUtility.GetCultureInfo(language);
             _data?.SetLanguage(language);
             if (!IsNeedRestart)
             {
@@ -70,19 +74,12 @@ namespace GameEngine
 
         // ── 多语言字体 ───────────────────────────────────────────────────────────
 
-        /// <summary>设置字体配置并重建语言字典。</summary>
-        /// <param name="config">字体配置</param>
-        public void SetFontConfig(FontLanguageConfig config)
-        {
-            _fontConfig = config;
-        }
-
         /// <summary>给 Text 组件更换字体：按语言 key 与 Text 当前字体匹配配置，并按比例调整字号与行高。</summary>
         /// <param name="text">Text 组件</param>
         /// <param name="languageKey">语言 key</param>
         public void ApplyFont(IFontChange text)
         {
-            if (text == null || text.OriginalFontName == null)
+            if (text == null || string.IsNullOrEmpty(text.OriginalFontName))
             {
                 Log.Warning("[Text] ApplyFont failed: text 或 text.OriginalFontName 为空");
                 return;
@@ -111,7 +108,7 @@ namespace GameEngine
                 }
                 _fontCache[entry.TargetFontPath] = font;
             }
-            
+
             if (font.name != text.OriginalFontName)
             {
                 text.ChangeFont(font, entry);
