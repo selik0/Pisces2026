@@ -1,4 +1,5 @@
 using System;
+using GameNative;
 using UnityEngine;
 
 namespace GameEngine
@@ -34,6 +35,7 @@ namespace GameEngine
             }
 
             Log.Initialize();
+            NativeLog.SetService(new GameNativeLogService());
 
             _lifecycleManagers = new ILogin[]
             {
@@ -94,6 +96,7 @@ namespace GameEngine
                 _initialized = false;
                 _lifecycleManagers = null;
                 Log.Debug("[ManagerHub] 框架主循环已关闭。");
+                NativeLog.ClearService();
                 Log.Shutdown();
             }
 
