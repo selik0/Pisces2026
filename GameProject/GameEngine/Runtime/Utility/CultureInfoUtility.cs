@@ -7,12 +7,16 @@ namespace GameEngine
     public static class CultureInfoUtility
     {
         /// <summary>获取指定界面语言的默认区域性信息。</summary>
+        /// <param name="language">界面语言。</param>
+        /// <returns>只读的共享区域性信息。</returns>
         public static CultureInfo GetCultureInfo(Language language)
         {
             return CultureInfo.GetCultureInfo(GetCultureName(language));
         }
 
         /// <summary>获取指定结算货币的默认区域性信息。</summary>
+        /// <param name="currency">结算货币。</param>
+        /// <returns>只读的共享区域性信息。</returns>
         public static CultureInfo GetCultureInfo(Currency currency)
         {
             return CultureInfo.GetCultureInfo(GetCultureName(currency));
@@ -22,6 +26,9 @@ namespace GameEngine
         /// 获取使用指定语言格式和指定货币规则的区域性信息。
         /// 返回独立的可写副本，不会修改 .NET 缓存的共享区域性信息。
         /// </summary>
+        /// <param name="language">决定日期和数字格式的界面语言。</param>
+        /// <param name="currency">决定货币符号和小数位数的结算货币。</param>
+        /// <returns>组合语言和货币规则的可写区域性信息。</returns>
         public static CultureInfo GetCultureInfo(Language language, Currency currency)
         {
             CultureInfo culture = (CultureInfo)GetCultureInfo(language).Clone();

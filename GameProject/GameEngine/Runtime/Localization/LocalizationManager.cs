@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using UnityEngine;
-
 namespace GameEngine
 {
     /// <summary>本地化配置管理器，保存当前地区、界面语言、音频语言与结算货币。</summary>
@@ -40,7 +36,6 @@ namespace GameEngine
             Language = language;
             TextManager.Instance.SetLanguage(language);
             SpriteUtility.SetLanguage(language);
-            TimeFormatUtility.SetLanguage(language);
         }
 
         /// <summary>设置音频语言。</summary>
@@ -67,10 +62,10 @@ namespace GameEngine
             }
 
             SetRegion(config.Region);
+            TextManager.Instance.IsNeedRestart = config.IsNeedRestart;
             SetLanguage(config.Language);
             SetAudioLanguage(config.AudioLanguage);
             SetCurrency(config.Currency);
-            TextManager.Instance.IsNeedRestart = config.IsNeedRestart;
         }
     }
 }

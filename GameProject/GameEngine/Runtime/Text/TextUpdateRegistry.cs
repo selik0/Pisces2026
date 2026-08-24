@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace GameEngine
 {
@@ -9,6 +8,9 @@ namespace GameEngine
     {
         private static readonly HashSet<IFontChange> Texts = new HashSet<IFontChange>();
         private static readonly List<IFontChange> UpdateSnapshot = new List<IFontChange>();
+
+        /// <summary>当前注册的文本数量，包含尚未清理的已销毁对象。</summary>
+        public static int Count => Texts.Count;
 
         /// <summary>注册文本对象，并立即应用当前语言字体。重复注册无效。</summary>
         public static void Register(IFontChange text)
@@ -21,7 +23,7 @@ namespace GameEngine
             TextManager.Instance.ApplyFont(text);
         }
 
-        /// <summary>注销文本对象。文本销毁或不再参与语言更新时必须调用。</summary>
+        /// <summary>注销不再参与语言更新的文本对象。</summary>
         public static void Unregister(IFontChange text)
         {
             if (text != null)
@@ -30,7 +32,7 @@ namespace GameEngine
             }
         }
 
-        /// <summary>按当前语言更新全部有效文本，并移除已销毁的 Unity 对象。</summary>
+        /// <summary>更新全部有效文本，并清理已销毁对象。</summary>
         public static void UpdateAll()
         {
             UpdateSnapshot.Clear();

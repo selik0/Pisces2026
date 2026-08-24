@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace GameEngine
 {
@@ -13,8 +11,10 @@ namespace GameEngine
         private FontLanguageConfig _fontConfig;
         private readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>();
 
-        public static CultureInfo CultureInfo = CultureInfoUtility.GetCultureInfo(Language.Chinese);
-        /// <summary>切换界面语言后是否标记客户端需要重启，由业务层读取并提示用户。</summary>
+        /// <summary>当前界面语言对应的区域性信息。</summary>
+        public static CultureInfo CultureInfo { get; private set; } = CultureInfoUtility.GetCultureInfo(Language.Chinese);
+
+        /// <summary>切换界面语言后是否需要重启；为 false 时立即更新已注册字体。</summary>
         public bool IsNeedRestart { get; set; }
 
         // ── 本地化 ───────────────────────────────────────────────────────────────
@@ -74,9 +74,16 @@ namespace GameEngine
 
         // ── 多语言字体 ───────────────────────────────────────────────────────────
 
-        /// <summary>给 Text 组件更换字体：按语言 key 与 Text 当前字体匹配配置，并按比例调整字号与行高。</summary>
-        /// <param name="text">Text 组件</param>
-        /// <param name="languageKey">语言 key</param>
+        /// <summary>设置字体语言配置并刷新已注册文本。</summary>
+        /// <param name="config">字体语言配置。</param>
+        public void SetFontConfig(FontLanguageConfig config)
+        {
+            _fontConfig = config;
+            TextUpdateRegistry.UpdateAll();
+        }
+
+        /// <summary>根据当前语言和初始字体为文本应用字体配置。</summary>
+        /// <param name="text">需要更新的文本对象。</param>
         public void ApplyFont(IFontChange text)
         {
             if (text == null || string.IsNullOrEmpty(text.OriginalFontName))
