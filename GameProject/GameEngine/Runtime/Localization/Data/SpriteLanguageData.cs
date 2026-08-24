@@ -10,7 +10,7 @@ namespace GameEngine
         /// <summary>精灵语言标识数量。</summary>
         public int SpriteLanguageCount => _spriteLanguages.Count;
 
-        private string _spriteSuffix = string.Empty;
+        protected string _spriteSuffix = string.Empty;
 
         /// <summary>获取本地化精灵名称，默认规则：名称后追加当前语言，如 name_en。</summary>
         public virtual string GetSpriteName(string name)

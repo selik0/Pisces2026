@@ -21,8 +21,6 @@ namespace GameLogic
             { Language.Turkish, "Turkish" },
         };
 
-        private string _spriteSuffix = string.Empty;
-
         public override void SetLanguage(Language language)
         {
             base.SetLanguage(language);
