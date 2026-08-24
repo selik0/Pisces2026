@@ -6,7 +6,7 @@ namespace GameEngine
     /// <summary>
     /// 框架管理器总入口，集中访问并驱动各运行时系统的默认实例。
     /// </summary>
-    public class ManagerHub : MonoSingleton<ManagerHub>
+    public class ManagerHub : MonoSingleton<ManagerHub>, ILogin
     {
         private ILogin[] _lifecycleManagers;
         private bool _initialized;
@@ -69,14 +69,14 @@ namespace GameEngine
         }
 
         /// <summary>进入一次游戏会话，并清理上一次会话可能残留的状态。</summary>
-        public override void Login()
+        public void Login()
         {
             Initialize();
             InvokeLifecycle(login: true);
         }
 
         /// <summary>退出当前游戏会话，按初始化逆序清理各管理器。</summary>
-        public override void Logout()
+        public void Logout()
         {
             if (!_initialized)
             {

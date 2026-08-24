@@ -9,7 +9,7 @@ namespace GameEngine
     /// 需要在游戏主循环中每帧调用 <see cref="Tick"/>。
     /// </para>
     /// </summary>
-    public sealed class FsmManager : Singleton<FsmManager>
+    public sealed class FsmManager : Singleton<FsmManager>, ILogin
     {
         // 使用非泛型包装接口统一存储不同持有者类型的 FSM
         private readonly Dictionary<string, IFsmBase> _fsms = new Dictionary<string, IFsmBase>();
@@ -139,12 +139,12 @@ namespace GameEngine
             Log.Debug("[FsmManager] 已销毁所有 FSM");
         }
 
-        public override void Login()
+        public void Login()
         {
             DestroyAll();
         }
 
-        public override void Logout()
+        public void Logout()
         {
             DestroyAll();
         }

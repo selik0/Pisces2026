@@ -8,7 +8,7 @@ namespace GameEngine
     /// 资源加载与缓存管理器。相同地址和类型共享底层加载操作，并按加载和释放次数计数。
     /// 需要在主循环中调用 <see cref="Tick"/> 才会回收已过缓存期的资源。
     /// </summary>
-    public sealed class AssetManager : Singleton<AssetManager>
+    public sealed class AssetManager : Singleton<AssetManager>, ILogin
     {
         internal readonly struct AssetKey : IEquatable<AssetKey>
         {
@@ -190,13 +190,13 @@ namespace GameEngine
             _expiredEntries.Clear();
         }
 
-        public override void Login()
+        public void Login()
         {
             ClearAll();
             _time = 0f;
         }
 
-        public override void Logout()
+        public void Logout()
         {
             ClearAll();
         }

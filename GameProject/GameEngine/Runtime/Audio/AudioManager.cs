@@ -13,7 +13,7 @@ namespace GameEngine
     /// 分组混音与 BGM 独立通道；每个播放中的音频对应一个 <see cref="SoundInstance"/>。
     /// 剪辑默认从 Resources 加载，可通过 <see cref="SetClipLoader"/> 替换资源后端。
     /// </summary>
-    public sealed class AudioManager : MonoSingleton<AudioManager>
+    public sealed class AudioManager : MonoSingleton<AudioManager>, ILogin
     {
         /// <summary>音源对象池上限，超过后直接销毁多余音源对象。</summary>
         private const int MaxSourcePoolSize = 64;
@@ -113,12 +113,12 @@ namespace GameEngine
             base.OnDestroy();
         }
 
-        public override void Login()
+        public void Login()
         {
             StopAll();
         }
 
-        public override void Logout()
+        public void Logout()
         {
             StopAll();
             ClearCache();

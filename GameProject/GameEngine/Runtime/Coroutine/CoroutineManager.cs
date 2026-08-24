@@ -10,7 +10,7 @@ namespace GameEngine
     /// 需在游戏主循环中每帧调用 <see cref="Tick"/>。
     /// </para>
     /// </summary>
-    public sealed class CoroutineManager : Singleton<CoroutineManager>
+    public sealed class CoroutineManager : Singleton<CoroutineManager>, ILogin
     {
         private readonly List<CoroutineEntry> _coroutines = new List<CoroutineEntry>();
         private readonly List<CoroutineEntry> _toAdd = new List<CoroutineEntry>();
@@ -101,12 +101,12 @@ namespace GameEngine
             }
         }
 
-        public override void Login()
+        public void Login()
         {
             StopAll();
         }
 
-        public override void Logout()
+        public void Logout()
         {
             StopAll();
         }

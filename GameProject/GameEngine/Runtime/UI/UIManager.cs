@@ -16,7 +16,7 @@ namespace GameEngine
     ///   <item>获取途径跳转：支持跳转深度配置（默认 2），达到上限跳转后触发 <see cref="OnJumpDepthLimitReached"/>。</item>
     /// </list>
     /// </summary>
-    public sealed class UIManager : Singleton<UIManager>
+    public sealed class UIManager : Singleton<UIManager>, ILogin
     {
         private sealed class NavigationNode
         {
@@ -398,12 +398,12 @@ namespace GameEngine
             CurrentJumpDepth = 0;
         }
 
-        public override void Login()
+        public void Login()
         {
             DestroyAll();
         }
 
-        public override void Logout()
+        public void Logout()
         {
             DestroyAll();
         }

@@ -10,7 +10,7 @@ namespace GameEngine
     /// 需要注销的监听器应延迟到 Emit 返回之后处理。
     /// </summary>
     /// <remarks>非线程安全，应仅在 Unity 主线程使用。</remarks>
-    public sealed class EventManager : Singleton<EventManager>
+    public sealed class EventManager : Singleton<EventManager>, ILogin
     {
         private readonly Dictionary<int, EventBinding> _bindings = new Dictionary<int, EventBinding>();
 
@@ -118,12 +118,12 @@ namespace GameEngine
             Log.Debug($"[EventManager] ClearAll removed={removed}");
         }
 
-        public override void Login()
+        public void Login()
         {
             ClearAll();
         }
 
-        public override void Logout()
+        public void Logout()
         {
             ClearAll();
         }

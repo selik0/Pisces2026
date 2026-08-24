@@ -18,7 +18,7 @@ namespace GameEngine
     ///   <item>Tick 期间新增/取消的定时器在下一帧生效，不影响当前帧遍历</item>
     /// </list>
     /// </summary>
-    public sealed class TimerManager : Singleton<TimerManager>
+    public sealed class TimerManager : Singleton<TimerManager>, ILogin
     {
         public TimerManager()
         {
@@ -150,13 +150,13 @@ namespace GameEngine
         // ── ILogin ───────────────────────────────────────────────────────────────
 
         /// <summary>登录时清理残留定时器，保持初始状态。</summary>
-        public override void Login()
+        public void Login()
         {
             StopAll();
         }
 
         /// <summary>登出时停止所有定时器，避免跨会话回调泄漏。</summary>
-        public override void Logout()
+        public void Logout()
         {
             StopAll();
         }

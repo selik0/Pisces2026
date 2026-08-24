@@ -6,7 +6,7 @@ namespace GameEngine
     /// <summary>
     /// 场景管理器。
     /// <para>
-    /// 继承 <see cref="Singleton{T}"/>（实现 <see cref="ILogin"/>），
+    /// 继承 <see cref="Singleton{T}"/> 并独立实现 <see cref="ILogin"/>，
     /// 登录/登出时销毁所有场景，避免跨会话残留。
     /// 统一注册、切换和驱动所有 <see cref="IScene"/> 实例。
     /// 需要在游戏主循环中每帧调用 <see cref="Tick"/>。
@@ -228,13 +228,13 @@ namespace GameEngine
         // ── ILogin ───────────────────────────────────────────────────────────────
 
         /// <summary>登录时清理残留场景，保持初始状态。</summary>
-        public override void Login()
+        public void Login()
         {
             DestroyAll();
         }
 
         /// <summary>登出时销毁所有场景，避免跨会话残留。</summary>
-        public override void Logout()
+        public void Logout()
         {
             DestroyAll();
         }

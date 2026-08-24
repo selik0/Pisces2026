@@ -2,7 +2,7 @@ namespace GameEngine
 {
     /// <summary>
     /// 全局红点管理器单例，内部持有默认的 <see cref="RedDotTree"/> 实例。
-    /// 继承 <see cref="Singleton{T}"/>（实现 <see cref="ILogin"/>），
+    /// 继承 <see cref="Singleton{T}"/> 并独立实现 <see cref="ILogin"/>，
     /// 登录/登出时重置整棵树，避免跨会话残留。
     ///
     /// <para><b>设计概念</b></para>
@@ -54,13 +54,13 @@ namespace GameEngine
         // ── ILogin ───────────────────────────────────────────────────────────────
 
         /// <summary>登录时重置红点树，保持初始状态。</summary>
-        public override void Login()
+        public void Login()
         {
             
         }
 
         /// <summary>登出时重置红点树，避免跨会话残留。</summary>
-        public override void Logout()
+        public void Logout()
         {
             Reset();
         }
