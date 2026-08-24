@@ -40,6 +40,7 @@ namespace GameEngine
             Language = language;
             TextManager.Instance.SetLanguage(language);
             SpriteUtility.SetLanguage(language);
+            TimeFormatUtility.SetLanguage(language);
         }
 
         /// <summary>设置音频语言。</summary>

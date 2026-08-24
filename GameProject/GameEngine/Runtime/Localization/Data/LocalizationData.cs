@@ -16,7 +16,7 @@ namespace GameEngine
         /// <summary>设置当前语言，语言变化时重新初始化数据。</summary>
         public virtual void SetLanguage(TEnum language)
         {
-            if (EqualityComparer<TEnum>.Default.Equals(language, Language))
+            if (EqualityComparer<TEnum>.Default.Equals(language, Language) && IsInitialized)
             {
                 return;
             }

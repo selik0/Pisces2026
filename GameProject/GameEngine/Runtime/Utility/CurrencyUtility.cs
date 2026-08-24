@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace GameEngine
 {
@@ -6,9 +7,10 @@ namespace GameEngine
     public static class CurrencyUtility
     {
         private static CurrencyConvertData _data;
+        private static CultureInfo _cultureInfo = CultureInfoUtility.GetCultureInfo(Currency.CNY);
 
         /// <summary>当前货币类型。</summary>
-        public static Currency Language { get; private set; }
+        public static Currency Currency { get; private set; }
 
         /// <summary>已注册的货币转换数据数量，未初始化时为 0。</summary>
         public static int Count => _data?.Count ?? 0;
@@ -24,14 +26,15 @@ namespace GameEngine
             }
 
             _data = data;
-            _data.SetLanguage(Language);
+            _data.SetLanguage(Currency);// or whatever culture you want to use
         }
 
         /// <summary>设置当前货币类型。</summary>
         public static void SetLanguage(Currency currency)
         {
-            Language = currency;
+            Currency = currency;
             _data?.SetLanguage(currency);
+            _cultureInfo = CultureInfoUtility.GetCultureInfo(currency); 
         }
 
         /// <summary>获取指定 id 的显示金额，不存在时返回 0。</summary>
@@ -44,6 +47,12 @@ namespace GameEngine
             }
 
             return _data.GetCurrency(id);
+        }
+
+        public static string GetMoneyText(uint id)
+        {
+            var money = GetMoney(id);
+            return money.ToString("C2", _cultureInfo);
         }
     }
 }
