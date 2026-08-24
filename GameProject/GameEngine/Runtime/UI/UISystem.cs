@@ -43,21 +43,8 @@ namespace GameEngine
     /// </summary>
     public static class UISystem
     {
-        private static UIManager _default;
-
-        /// <summary>全局默认 UIManager 实例（懒初始化）</summary>
-        public static UIManager Default
-        {
-            get
-            {
-                if (_default == null)
-                {
-                    _default = new UIManager();
-                }
-
-                return _default;
-            }
-        }
+        /// <summary>全局默认 UIManager 实例。</summary>
+        public static UIManager Default => UIManager.Instance;
 
         /// <summary>跳转深度上限，默认 2。</summary>
         public static int MaxJumpDepth

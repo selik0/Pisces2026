@@ -1,16 +1,15 @@
+using GameClient;
+using GameEngine;
+using GameNative;
 using UnityEngine;
 
-public class GameLauncher : MonoBehaviour
+/// <summary>Unity 客户端启动装配入口。</summary>
+public static class GameLauncher
 {
-    // Start is called before the first frame update
-    void Start()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Bootstrap()
     {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
+        Platform.SetService(new PlatformImp());
+        ManagerHub.Instance.Initialize();
     }
 }

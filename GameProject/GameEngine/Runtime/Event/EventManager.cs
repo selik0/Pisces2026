@@ -118,6 +118,16 @@ namespace GameEngine
             Log.Debug($"[EventManager] ClearAll removed={removed}");
         }
 
+        public override void Login()
+        {
+            ClearAll();
+        }
+
+        public override void Logout()
+        {
+            ClearAll();
+        }
+
         public void Emit(int eventKey)
         {
             if (!_bindings.TryGetValue(eventKey, out EventBinding binding))

@@ -33,21 +33,8 @@ namespace GameEngine
     /// </summary>
     public static class FsmSystem
     {
-        private static FsmManager _default;
-
-        /// <summary>全局默认 FsmManager 实例（懒初始化）</summary>
-        public static FsmManager Default
-        {
-            get
-            {
-                if (_default == null)
-                {
-                    _default = new FsmManager();
-                }
-
-                return _default;
-            }
-        }
+        /// <summary>全局默认 FsmManager 实例。</summary>
+        public static FsmManager Default => FsmManager.Instance;
 
         /// <summary>当前管理的有限状态机数量</summary>
         public static int Count => Default.Count;

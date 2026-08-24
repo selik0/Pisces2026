@@ -8,7 +8,7 @@ namespace GameEngine
     /// <summary>
     /// 音频管理器单例，按 <see cref="AudioEntry"/> 配置播放 BGM 与音效。
     /// 音频配置由内部 <see cref="AudioLanguageData"/> 保存（未初始化前为空），通过 <see cref="InitializeData"/> 注入。
-    /// 基于 <see cref="MonoSingleton{T}"/> 自动创建常驻实例，自身 Update 驱动，不依赖主循环 Tick。
+    /// 基于 <see cref="MonoSingleton{T}"/> 自动创建常驻实例，由 <see cref="ManagerHub"/> 统一驱动。
     /// 支持 <see cref="AudioPlayMode"/> 各播放模式、随机音量/音调与剪辑权重、淡入淡出、同层抢占、
     /// 分组混音与 BGM 独立通道；每个播放中的音频对应一个 <see cref="SoundInstance"/>。
     /// 剪辑默认从 Resources 加载，可通过 <see cref="SetClipLoader"/> 替换资源后端。
@@ -93,14 +93,15 @@ namespace GameEngine
             Log.Debug("[AudioManager] 初始化完成。");
         }
 
-        private void Update()
+        /// <summary>推进所有播放实例，由框架主循环每帧调用。</summary>
+        public void Tick(float unscaledDeltaTime)
         {
             if (_instances.Count == 0)
             {
                 return;
             }
 
-            UpdateInstances();
+            UpdateInstances(unscaledDeltaTime);
         }
 
         protected override void OnDestroy()
@@ -110,6 +111,18 @@ namespace GameEngine
             _bgmInstance = null;
             _bgmSource = null;
             base.OnDestroy();
+        }
+
+        public override void Login()
+        {
+            StopAll();
+        }
+
+        public override void Logout()
+        {
+            StopAll();
+            ClearCache();
+            Paused = false;
         }
 
         // ── 混音 ───────────────────────────────────────────────────────────────
@@ -410,9 +423,8 @@ namespace GameEngine
 
         // ── 内部：每帧驱动 ─────────────────────────────────────────────────────
 
-        private void UpdateInstances()
+        private void UpdateInstances(float deltaTime)
         {
-            float deltaTime = Time.unscaledDeltaTime;
             float masterVolume = Muted ? 0f : MasterVolume;
 
             for (int i = _instances.Count - 1; i >= 0; i--)
