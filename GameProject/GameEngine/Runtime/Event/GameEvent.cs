@@ -7,10 +7,10 @@ namespace GameEngine
     /// </summary>
     /// <code>
     /// const int ScoreChanged = 1;
-    /// EventSystem.Subscribe&lt;int&gt;(ScoreChanged, score => RefreshUI(score));
-    /// EventSystem.Emit(ScoreChanged, 100);
+    /// GameEvent.Subscribe<int>(ScoreChanged, score => RefreshUI(score));
+    /// GameEvent.Emit(ScoreChanged, 100);
     /// </code>
-    public static class EventSystem
+    public static class GameEvent
     {
         /// <summary>全局默认 EventManager 实例。</summary>
         public static EventManager Default => EventManager.Instance;

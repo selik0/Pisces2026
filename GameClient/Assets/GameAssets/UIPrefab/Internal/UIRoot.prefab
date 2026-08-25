@@ -354,5 +354,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UICamera: {fileID: 6814434891996985315}
+  UIAudioListener: {fileID: 5418724355066017306}
   UICanvas: {fileID: 6341926690695515273}
+  UICanvasScaler: {fileID: 5285377749543043193}
   UIEventSystem: {fileID: 7445827890285708868}
+  UIGraphicRaycaster: {fileID: 2405747026061243213}

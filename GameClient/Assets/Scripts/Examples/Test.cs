@@ -12,9 +12,9 @@ public class Test : MonoBehaviour
     {
         button.onClick.AddListener(() =>
         {
-            EventSystem.Default.Emit(1);
+            GameEvent.Default.Emit(1);
         });
-        EventSystem.Default.Subscribe(1, Func);
+        GameEvent.Default.Subscribe(1, Func);
     }
 
     // Update is called once per frame
