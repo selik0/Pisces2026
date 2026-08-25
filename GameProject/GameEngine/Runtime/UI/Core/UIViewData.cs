@@ -1,8 +1,7 @@
 namespace GameEngine
 {
     /// <summary>
-    /// UI 界面数据基类。
-    /// 约定一个界面对应一个数据类，通过 <see cref="UIManager.OpenView{TData}(TData)"/> 用数据打开对应界面。
+    /// UI 打开数据基类。数据只作为显式指定界面类型时的参数，不能用于推断要打开的界面类型。
     /// </summary>
     public abstract class UIViewData
     {

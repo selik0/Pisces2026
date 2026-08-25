@@ -11,8 +11,8 @@ namespace GameEngine
     ///   <item>分层显示：高层级遮盖低层级，同层内只显示最上层，<see cref="UILayer.Guide"/>、<see cref="UILayer.Toast"/> 默认不遮盖下层。</item>
     ///   <item>界面组合：界面可挂载 <see cref="UIWidget"/> 组件和 <see cref="UIView"/> 子界面。</item>
     ///   <item>栈式关闭：按打开顺序反向逐级关闭，也可直接关闭较早打开的界面。</item>
-    ///   <item>数据驱动：一个界面对应一个数据类，通过数据打开界面。</item>
-    ///   <item>同层队列：同一层的数据和界面可入队后逐个打开。</item>
+    ///   <item>显式类型：必须指定界面类型，可同时传入对应的打开数据。</item>
+    ///   <item>同层队列：同一层的界面打开请求及数据可入队后逐个处理。</item>
     ///   <item>获取途径跳转：支持跳转深度配置（默认 2），达到上限跳转后触发 <see cref="OnJumpDepthLimitReached"/>。</item>
     /// </list>
     /// </summary>
@@ -27,7 +27,6 @@ namespace GameEngine
 
         private readonly Dictionary<UILayer, UILayerStack> _layerStacks = new Dictionary<UILayer, UILayerStack>();
         private readonly List<NavigationNode> _navigationStack = new List<NavigationNode>();
-        private readonly Dictionary<Type, Type> _viewTypeByDataType = new Dictionary<Type, Type>();
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
         private readonly HashSet<UILayer> _nonCoveringLayers = new HashSet<UILayer>();
 
@@ -97,27 +96,12 @@ namespace GameEngine
             Log.Debug("[UIManager] 初始化完成。");
         }
 
-        // ── 注册 ────────────────────────────────────────────────────────────────
-
-        /// <summary>注册界面与数据类的映射，之后可通过 <c>OpenView&lt;TData&gt;</c> 用数据打开界面。</summary>
-        public void RegisterView<TView, TData>() where TView : UIView, new() where TData : UIViewData
-        {
-            _viewTypeByDataType[typeof(TData)] = typeof(TView);
-        }
-
         // ── 打开 ────────────────────────────────────────────────────────────────
 
         /// <summary>按指定界面类型打开界面，压入对应层级。每次调用创建一个新实例。</summary>
         public TView OpenView<TView>(UIViewData data = null) where TView : UIView, new()
         {
             return OpenInternal(typeof(TView), data, false, null) as TView;
-        }
-
-        /// <summary>通过数据类打开对应界面，需先调用 <see cref="RegisterView{TView,TData}"/> 注册映射。</summary>
-        public UIView OpenView<TData>(TData data = null) where TData : UIViewData
-        {
-            Type viewType = ResolveViewType(typeof(TData));
-            return viewType != null ? OpenInternal(viewType, data, false, null) : null;
         }
 
         // ── 同层队列 ────────────────────────────────────────────────────────────
@@ -128,16 +112,6 @@ namespace GameEngine
         public void EnqueueOpen<TView>(UIViewData data = null) where TView : UIView, new()
         {
             EnqueueInternal(typeof(TView), data, false, null);
-        }
-
-        /// <summary>按数据类型将界面加入对应层级队列，需先注册映射。</summary>
-        public void EnqueueOpen<TData>(TData data = null) where TData : UIViewData
-        {
-            Type viewType = ResolveViewType(typeof(TData));
-            if (viewType != null)
-            {
-                EnqueueInternal(viewType, data, false, null);
-            }
         }
 
         // ── 关闭 ────────────────────────────────────────────────────────────────
@@ -254,16 +228,6 @@ namespace GameEngine
         public void NavigateTo<TView>(UIViewData data = null) where TView : UIView, new()
         {
             NavigateInternal(typeof(TView), data, null);
-        }
-
-        /// <summary>按数据类型跳转到对应界面。</summary>
-        public void NavigateTo<TData>(TData data = null) where TData : UIViewData
-        {
-            Type viewType = ResolveViewType(typeof(TData));
-            if (viewType != null)
-            {
-                NavigateInternal(viewType, data, null);
-            }
         }
 
         // ── 界面组合 ────────────────────────────────────────────────────────────
@@ -557,17 +521,6 @@ namespace GameEngine
                     return;
                 }
             }
-        }
-
-        private Type ResolveViewType(Type dataType)
-        {
-            if (_viewTypeByDataType.TryGetValue(dataType, out Type viewType))
-            {
-                return viewType;
-            }
-
-            Log.Error($"[UIManager] 未注册数据类型 {dataType.Name} 对应的界面，请先调用 RegisterView。");
-            return null;
         }
 
         private UILayer ResolveLayer(Type viewType)
