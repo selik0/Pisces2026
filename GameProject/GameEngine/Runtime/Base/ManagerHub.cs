@@ -45,6 +45,7 @@ namespace GameEngine
                 FsmManager.Instance,
                 SceneManager.Instance,
                 UIManager.Instance,
+                UIWidgetManager.Instance,
                 AssetManager.Instance,
                 RedDotManager.Instance,
                 AudioManager.Instance
@@ -67,6 +68,7 @@ namespace GameEngine
             TickSafely("FsmManager", () => FsmManager.Instance.Tick(Time.deltaTime));
             TickSafely("SceneManager", () => SceneManager.Instance.Tick(Time.deltaTime));
             TickSafely("UIManager", () => UIManager.Instance.Tick(Time.deltaTime));
+            TickSafely("UIWidgetManager", () => UIWidgetManager.Instance.Tick(Time.unscaledDeltaTime));
             TickSafely("AudioManager", () => AudioManager.Instance.Tick(Time.unscaledDeltaTime));
         }
 

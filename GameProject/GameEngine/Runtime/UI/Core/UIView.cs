@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace GameEngine
 {
     /// <summary>
@@ -22,7 +20,7 @@ namespace GameEngine
     /// </summary>
     public abstract class UIView : UIBrick
     {
-        /// <summary>UI 所属层级</summary>
+        /// <summary>UI 所属层级。</summary>
         public virtual UILayer Layer { get; } = UILayer.Window;
 
         /// <summary>
@@ -30,5 +28,17 @@ namespace GameEngine
         /// 约定一个界面对应一个数据类，由 <see cref="UIManager"/> 打开界面时写入。
         /// </summary>
         public UIViewData Data { get; internal set; }
+
+        /// <summary>
+        /// 当前界面独占的子界面管理器。同一时刻只显示一个 <see cref="UISubView"/>。
+        /// 仅顶层界面拥有该管理器。
+        /// </summary>
+        public ChildUIManager ChildUIManager { get; internal set; }
+
+        /// <summary>处理 ESC 或 Android 返回键等返回操作。</summary>
+        public virtual bool OnBack()
+        {
+            return false;
+        }
     }
 }

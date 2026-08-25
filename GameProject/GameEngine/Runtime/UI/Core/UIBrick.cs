@@ -27,6 +27,8 @@ namespace GameEngine
         private bool _pendingEntityDestroy;
         private readonly EventGroup _eventGroup = new EventGroup();
 
+        internal event Action Closed;
+
         /// <summary>UI 预制体路径。</summary>
         public virtual string PrefabPath { get; }
 
@@ -217,7 +219,35 @@ namespace GameEngine
             }
 
             State = UIBrickState.Closed;
+            try
+            {
+                Closed?.Invoke();
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.Closed listener failed.", exception);
+            }
+
             ProcessPendingEntityDestroy();
+        }
+
+        /// <summary>
+        /// 释放逻辑对象与实体的绑定，但不销毁实体 GameObject。
+        /// 对象池可在 Widget 归还时使用，释放后的逻辑对象不可再次打开。
+        /// </summary>
+        internal void ReleaseBinding()
+        {
+            if (State == UIBrickState.Created || State == UIBrickState.Opened || State == UIBrickState.Hiding)
+            {
+                Close();
+            }
+
+            if (State != UIBrickState.Closed)
+            {
+                return;
+            }
+
+            DestroyCore();
         }
 
         protected virtual void OnBind()
@@ -259,12 +289,6 @@ namespace GameEngine
         private void UnregisterEvents()
         {
             _eventGroup.UnsubscribeAll();
-        }
-
-        /// <summary>处理 ESC 或 Android 返回键等返回操作。</summary>
-        public virtual bool OnBack()
-        {
-            return false;
         }
 
         private void OnEntityDestroyed()
@@ -324,6 +348,7 @@ namespace GameEngine
             {
                 Entity.RemoveDestroyListener(OnEntityDestroyed);
             }
+            Closed = null;
             Entity = null;
             GameObject = null;
             Transform = null;

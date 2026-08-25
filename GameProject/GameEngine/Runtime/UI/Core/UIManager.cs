@@ -28,14 +28,13 @@ namespace GameEngine
         private readonly Dictionary<UILayer, UILayerStack> _layerStacks = new Dictionary<UILayer, UILayerStack>();
         private readonly List<NavigationNode> _navigationStack = new List<NavigationNode>();
         private readonly Dictionary<Type, Type> _viewTypeByDataType = new Dictionary<Type, Type>();
-        private readonly Dictionary<UIView, List<UIBrick>> _childrenByView = new Dictionary<UIView, List<UIBrick>>();
-        private readonly Dictionary<UIBrick, UIView> _parentOfBrick = new Dictionary<UIBrick, UIView>();
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
         private readonly HashSet<UILayer> _nonCoveringLayers = new HashSet<UILayer>();
 
         private IUIViewLoader _loader;
         private Transform _uiRoot;
         private bool _initialized;
+        private bool _suspendPendingOpen;
 
         /// <summary>跳转深度上限。达到上限后跳转仍会执行，但会触发 <see cref="OnJumpDepthLimitReached"/>。</summary>
         public int MaxJumpDepth { get; set; } = 2;
@@ -200,35 +199,52 @@ namespace GameEngine
                 return;
             }
 
-            UIView[] views = stack.GetAllViews();
-            for (int i = views.Length - 1; i >= 0; i--)
+            bool previousSuspendState = _suspendPendingOpen;
+            _suspendPendingOpen = true;
+            try
             {
-                CloseInternal(views[i]);
+                stack.ClearPending();
+                UIView[] views = stack.GetAllViews();
+                for (int i = views.Length - 1; i >= 0; i--)
+                {
+                    CloseInternal(views[i]);
+                }
             }
-
-            stack.ClearPending();
+            finally
+            {
+                _suspendPendingOpen = previousSuspendState;
+            }
         }
 
         /// <summary>关闭全部已打开界面并清空所有队列。</summary>
         public void CloseAll()
         {
-            UIView[] views = new UIView[_navigationStack.Count];
-            for (int i = 0; i < views.Length; i++)
+            bool previousSuspendState = _suspendPendingOpen;
+            _suspendPendingOpen = true;
+            try
             {
-                views[i] = _navigationStack[i].View;
-            }
-
-            for (int i = views.Length - 1; i >= 0; i--)
-            {
-                if (_navigationStack.Exists(node => node.View == views[i]))
+                foreach (UILayerStack stack in _layerStacks.Values)
                 {
-                    CloseInternal(views[i]);
+                    stack.ClearPending();
+                }
+
+                UIView[] views = new UIView[_navigationStack.Count];
+                for (int i = 0; i < views.Length; i++)
+                {
+                    views[i] = _navigationStack[i].View;
+                }
+
+                for (int i = views.Length - 1; i >= 0; i--)
+                {
+                    if (_navigationStack.Exists(node => node.View == views[i]))
+                    {
+                        CloseInternal(views[i]);
+                    }
                 }
             }
-
-            foreach (UILayerStack stack in _layerStacks.Values)
+            finally
             {
-                stack.ClearPending();
+                _suspendPendingOpen = previousSuspendState;
             }
         }
 
@@ -253,68 +269,25 @@ namespace GameEngine
         // ── 界面组合 ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 在父界面下创建并打开一个 UI 组件。组件生命周期随父界面关闭而结束。
+        /// 通过父界面持有的 <see cref="ChildUIManager"/> 打开子界面。
+        /// 打开新子界面时会先关闭旧子界面，保证同一父界面只显示一个子界面。
         /// </summary>
-        /// <param name="parent">父界面。</param>
-        /// <param name="containerPath">父界面下的挂载容器子节点路径，为 null 时直接挂到父界面节点。</param>
-        public TWidget CreateWidget<TWidget>(UIView parent, string containerPath = null) where TWidget : UIWidget, new()
+        public TSubView OpenSubView<TSubView>(UIView parent, UIViewData data = null, string containerPath = null)
+            where TSubView : UISubView, new()
         {
-            if (parent == null)
+            if (parent == null || parent.ChildUIManager == null)
             {
-                Log.Error("[UIManager] CreateWidget 失败：parent 为 null。");
+                Log.Error("[UIManager] OpenSubView 失败：父界面为空或未由 UIManager 创建。");
                 return null;
             }
 
-            TWidget widget = new TWidget();
-            string prefabPath = widget.PrefabPath;
-            if (string.IsNullOrEmpty(prefabPath))
-            {
-                Log.Error($"[UIManager] 组件 {typeof(TWidget).Name} 未配置 PrefabPath，无法实例化。");
-                return null;
-            }
-
-            UIEntity entity = _loader.Instantiate(prefabPath, ResolveAttachPoint(parent, containerPath));
-            if (entity == null)
-            {
-                Log.Error($"[UIManager] 组件 {typeof(TWidget).Name} 实例化失败，预制体: {prefabPath}");
-                return null;
-            }
-
-            widget.Create(entity);
-            if (!widget.IsBound)
-            {
-                UnityEngine.Object.Destroy(entity.gameObject);
-                return null;
-            }
-
-            widget.Open();
-            AddChild(parent, widget);
-            return widget;
+            return parent.ChildUIManager.Open<TSubView>(data, containerPath);
         }
 
-        /// <summary>
-        /// 在父界面下打开一个子界面。子界面不进入层级栈，随父界面一同显示与关闭。
-        /// </summary>
-        /// <param name="parent">父界面。</param>
-        /// <param name="data">子界面数据。</param>
-        /// <param name="containerPath">父界面下的挂载容器子节点路径，为 null 时直接挂到父界面节点。</param>
-        public TView OpenSubView<TView>(UIView parent, UIViewData data = null, string containerPath = null) where TView : UIView, new()
+        /// <summary>关闭父界面当前显示的子界面。</summary>
+        public bool CloseSubView(UIView parent)
         {
-            if (parent == null)
-            {
-                Log.Error("[UIManager] OpenSubView 失败：parent 为 null。");
-                return null;
-            }
-
-            UIView view = InstantiateView(typeof(TView), data, ResolveAttachPoint(parent, containerPath), true);
-            if (view == null)
-            {
-                return null;
-            }
-
-            view.Open();
-            AddChild(parent, view);
-            return (TView)view;
+            return parent != null && parent.ChildUIManager != null && parent.ChildUIManager.Close();
         }
 
         // ── 查询 ────────────────────────────────────────────────────────────────
@@ -393,8 +366,6 @@ namespace GameEngine
             _layerRoots.Clear();
             _layerStacks.Clear();
             _navigationStack.Clear();
-            _childrenByView.Clear();
-            _parentOfBrick.Clear();
             CurrentJumpDepth = 0;
         }
 
@@ -433,7 +404,7 @@ namespace GameEngine
                 return null;
             }
 
-            UIView view = InstantiateView(viewType, data, null, false);
+            UIView view = InstantiateView(viewType, data);
             if (view == null)
             {
                 return null;
@@ -492,19 +463,9 @@ namespace GameEngine
 
         private void CloseInternal(UIView view)
         {
-            // 先从父界面解除绑定
-            if (_parentOfBrick.TryGetValue(view, out UIView parentView))
-            {
-                if (_childrenByView.TryGetValue(parentView, out List<UIBrick> siblings))
-                {
-                    siblings.Remove(view);
-                }
-
-                _parentOfBrick.Remove(view);
-            }
-
-            // 先关闭子界面/组件（最深层优先）
-            CloseChildren(view);
+            // 子界面与 Widget 必须先于父界面关闭；Widget 的池化由独立管理器负责。
+            view.ChildUIManager?.Close();
+            UIWidgetManager.Instance.CloseByParent(view);
 
             // 从层级栈移除
             UILayerStack stack = GetLayerStackOrNull(view.Layer);
@@ -519,33 +480,9 @@ namespace GameEngine
             RefreshLayers();
 
             // 层内队列逐个打开
-            if (removedFromLayer && stack.IsEmpty)
+            if (!_suspendPendingOpen && removedFromLayer && stack.IsEmpty)
             {
                 TryOpenNextPending(view.Layer);
-            }
-        }
-
-        private void CloseChildren(UIView view)
-        {
-            if (!_childrenByView.TryGetValue(view, out List<UIBrick> children))
-            {
-                return;
-            }
-
-            for (int i = children.Count - 1; i >= 0; i--)
-            {
-                UIBrick child = children[i];
-                children.RemoveAt(i);
-                _parentOfBrick.Remove(child);
-
-                if (child is UIView subView)
-                {
-                    CloseInternal(subView);
-                }
-                else
-                {
-                    CloseBrickSafely(child);
-                }
             }
         }
 
@@ -564,7 +501,7 @@ namespace GameEngine
             }
         }
 
-        private UIView InstantiateView(Type viewType, UIViewData data, Transform parent, bool parentExplicit)
+        private UIView InstantiateView(Type viewType, UIViewData data)
         {
             UIView view;
             try
@@ -577,11 +514,7 @@ namespace GameEngine
                 return null;
             }
 
-            if (!parentExplicit)
-            {
-                parent = GetLayerRoot(view.Layer);
-            }
-
+            Transform parent = GetLayerRoot(view.Layer);
             string prefabPath = view.PrefabPath;
             if (string.IsNullOrEmpty(prefabPath))
             {
@@ -597,6 +530,7 @@ namespace GameEngine
             }
 
             view.Data = data;
+            view.ChildUIManager = new ChildUIManager(view, () => _loader);
             view.Create(entity);
             if (!view.IsBound)
             {
@@ -606,18 +540,6 @@ namespace GameEngine
             }
 
             return view;
-        }
-
-        private void AddChild(UIView parent, UIBrick child)
-        {
-            if (!_childrenByView.TryGetValue(parent, out List<UIBrick> children))
-            {
-                children = new List<UIBrick>();
-                _childrenByView[parent] = children;
-            }
-
-            children.Add(child);
-            _parentOfBrick[child] = parent;
         }
 
         private void RemoveNavigationNode(UIView view)
@@ -706,23 +628,6 @@ namespace GameEngine
             {
                 _layerRoots[layers[i]].SetSiblingIndex(i);
             }
-        }
-
-        private Transform ResolveAttachPoint(UIView parent, string containerPath)
-        {
-            if (string.IsNullOrEmpty(containerPath))
-            {
-                return parent.Transform;
-            }
-
-            Transform container = parent.Transform.Find(containerPath);
-            if (container == null)
-            {
-                Log.Warning($"[UIManager] 未找到父界面 {parent.GetType().Name} 下的容器 {containerPath}，改用父节点挂载。");
-                return parent.Transform;
-            }
-
-            return container;
         }
 
         private void RefreshLayers()
