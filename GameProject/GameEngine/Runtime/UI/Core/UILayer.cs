@@ -12,17 +12,17 @@ namespace GameEngine
         /// <summary>常驻 HUD，例如主界面资源栏</summary>
         Hud = 1000,
 
-        /// <summary>全屏页面，打开后看不到下层界面，例如主界面</summary>
+        /// <summary>全屏页面，打开后看不到同级界面，例如主界面</summary>
         Window = 2000,
 
-        /// <summary>小提示弹窗/规则弹窗/简单功能面板</summary>
-        Hint = 3000,
-
-        /// <summary>普通窗口，例如设置、邮件</summary>
-        Popup = 4000,
+        /// <summary>普通窗口，例如设置、邮件，任务弹窗</summary>
+        Popup = 3000,
 
         /// <summary>高优先级弹窗，例如确认框、奖励弹窗</summary>
-        Dialog = 5000,
+        Dialog = 4000,
+
+        /// <summary>道具的详细信息弹窗, 允许同时显示多个</summary>
+        Tips = 5000,
 
         /// <summary>新手引导层</summary>
         Guide = 6000,

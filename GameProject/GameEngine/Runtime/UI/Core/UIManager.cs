@@ -8,7 +8,7 @@ namespace GameEngine
     /// UI 管理器。
     /// 按 <see cref="UILayer"/> 分层管理与显示界面，支持：
     /// <list type="bullet">
-    ///   <item>分层显示：高层级遮盖低层级，同层内只显示最上层，<see cref="UILayer.Guide"/>、<see cref="UILayer.Toast"/> 默认不遮盖下层。</item>
+    ///   <item>分层显示：UILayer 只决定渲染顺序，不影响其他层的可见性；普通层仅显示同层最上层，Tips 允许同层多个界面同时显示。</item>
     ///   <item>界面组合：界面可挂载 <see cref="UIWidget"/> 组件和 <see cref="UIView"/> 子界面。</item>
     ///   <item>栈式关闭：按打开顺序反向逐级关闭，也可直接关闭较早打开的界面。</item>
     ///   <item>显式类型：必须指定界面类型，可同时传入对应的打开数据。</item>
@@ -21,7 +21,7 @@ namespace GameEngine
         private readonly List<UIView> _navigationStack = new List<UIView>();
         private readonly Dictionary<UIView, List<UIView>> _ownedViewsByWindow = new Dictionary<UIView, List<UIView>>();
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
-        private readonly HashSet<UILayer> _nonCoveringLayers = new HashSet<UILayer>();
+        private readonly HashSet<UILayer> _multiVisibleLayers = new HashSet<UILayer>();
 
         private IUIViewLoader _loader;
         private Transform _uiRoot;
@@ -37,8 +37,7 @@ namespace GameEngine
         public UIManager()
         {
             _loader = new DefaultUIViewLoader();
-            _nonCoveringLayers.Add(UILayer.Guide);
-            _nonCoveringLayers.Add(UILayer.Toast);
+            _multiVisibleLayers.Add(UILayer.Tips);
         }
 
         /// <summary>设置自定义 UI 预制体加载器。</summary>
@@ -53,16 +52,16 @@ namespace GameEngine
             _loader = loader;
         }
 
-        /// <summary>配置某层是否遮盖下层界面。默认除 <see cref="UILayer.Guide"/>、<see cref="UILayer.Toast"/> 外均遮盖。</summary>
-        public void SetLayerCovering(UILayer layer, bool cover)
+        /// <summary>配置某层是否允许同层多个界面同时显示。Tips 默认允许。</summary>
+        public void SetLayerMultiVisible(UILayer layer, bool multiVisible)
         {
-            if (cover)
+            if (multiVisible)
             {
-                _nonCoveringLayers.Remove(layer);
+                _multiVisibleLayers.Add(layer);
             }
             else
             {
-                _nonCoveringLayers.Add(layer);
+                _multiVisibleLayers.Remove(layer);
             }
 
             RefreshLayers();
@@ -569,10 +568,29 @@ namespace GameEngine
             }
         }
 
-        private bool IsOwnerChainVisible(UIView view)
+        private bool IsOwnerWindowActive(UIView view)
         {
             UIView ownerWindow = view.OwnerWindow;
-            return ownerWindow == null || ownerWindow.IsVisible;
+            return ownerWindow == null || IsTopView(ownerWindow);
+        }
+
+        private int FindTopEligibleViewIndex(UILayerStack stack)
+        {
+            for (int i = stack.ViewCount - 1; i >= 0; i--)
+            {
+                if (IsOwnerWindowActive(stack.GetView(i)))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private bool IsTopView(UIView view)
+        {
+            UILayerStack stack = GetLayerStackOrNull(view.Layer);
+            return stack != null && stack.Top == view;
         }
 
         private void RemoveNavigationNode(UIView view)
@@ -659,13 +677,15 @@ namespace GameEngine
             foreach (KeyValuePair<UILayer, UILayerStack> kv in _layerStacks)
             {
                 UILayerStack stack = kv.Value;
-                bool layerVisible = IsLayerVisible(kv.Key);
+                bool multiVisible = _multiVisibleLayers.Contains(kv.Key);
+                int topEligibleIndex = multiVisible ? -1 : FindTopEligibleViewIndex(stack);
                 int count = stack.ViewCount;
 
                 for (int i = 0; i < count; i++)
                 {
                     UIView view = stack.GetView(i);
-                    bool shouldShow = layerVisible && i == count - 1 && IsOwnerChainVisible(view);
+                    bool canShowInLayer = multiVisible || i == topEligibleIndex;
+                    bool shouldShow = canShowInLayer && IsOwnerWindowActive(view);
                     if (shouldShow && !view.IsVisible)
                     {
                         view.Show();
@@ -676,32 +696,6 @@ namespace GameEngine
                     }
                 }
             }
-        }
-
-        private bool IsLayerVisible(UILayer layer)
-        {
-            UILayerStack stack = GetLayerStackOrNull(layer);
-            if (stack == null || stack.IsEmpty)
-            {
-                return false;
-            }
-
-            // 不遮盖层始终可见
-            if (_nonCoveringLayers.Contains(layer))
-            {
-                return true;
-            }
-
-            // 上方存在非空且遮盖的层级时，本层被遮盖
-            foreach (KeyValuePair<UILayer, UILayerStack> kv in _layerStacks)
-            {
-                if (kv.Key > layer && !kv.Value.IsEmpty && !_nonCoveringLayers.Contains(kv.Key))
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private void PruneDestroyedViews()
