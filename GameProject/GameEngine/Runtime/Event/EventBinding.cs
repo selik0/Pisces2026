@@ -5,7 +5,7 @@ namespace GameEngine
 {
     /// <summary>
     /// 保存同一个 EventKey 下的监听委托，并负责委托类型校验与逐个调用。
-    /// 注意：回调执行期间禁止 Subscribe / Unsubscribe 修改订阅集合，
+    /// 注意：回调执行期间禁止 Subscribe / Unsubscribe 修改订阅集合，不再考虑回调中注销自己的情况
     /// 否则遍历时枚举器会抛 InvalidOperationException；需要注销的监听器应延迟到派发结束后处理。
     /// </summary>
     internal sealed class EventBinding
