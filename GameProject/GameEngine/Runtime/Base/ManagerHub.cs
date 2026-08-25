@@ -45,6 +45,7 @@ namespace GameEngine
                 FsmManager.Instance,
                 SceneManager.Instance,
                 UIManager.Instance,
+                UIJumpManager.Instance,
                 UIWidgetManager.Instance,
                 AssetManager.Instance,
                 RedDotManager.Instance,

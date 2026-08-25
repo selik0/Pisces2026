@@ -30,6 +30,11 @@ namespace GameEngine
         public UIViewData Data { get; internal set; }
 
         /// <summary>
+        /// 当前界面附属的 Window 界面。附属界面随该界面隐藏和关闭，但仍按自身 UILayer 规则决定是否显示。
+        /// </summary>
+        public UIView OwnerWindow { get; internal set; }
+
+        /// <summary>
         /// 当前界面独占的子界面管理器。同一时刻只显示一个 <see cref="UISubView"/>。
         /// 仅顶层界面拥有该管理器。
         /// </summary>

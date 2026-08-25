@@ -13,20 +13,13 @@ namespace GameEngine
     ///   <item>栈式关闭：按打开顺序反向逐级关闭，也可直接关闭较早打开的界面。</item>
     ///   <item>显式类型：必须指定界面类型，可同时传入对应的打开数据。</item>
     ///   <item>同层队列：同一层的界面打开请求及数据可入队后逐个处理。</item>
-    ///   <item>获取途径跳转：支持跳转深度配置（默认 2），达到上限跳转后触发 <see cref="OnJumpDepthLimitReached"/>。</item>
     /// </list>
     /// </summary>
     public sealed class UIManager : Singleton<UIManager>, ILogin
     {
-        private sealed class NavigationNode
-        {
-            public UIView View;
-            public bool IsJump;
-            public string Source;
-        }
-
         private readonly Dictionary<UILayer, UILayerStack> _layerStacks = new Dictionary<UILayer, UILayerStack>();
-        private readonly List<NavigationNode> _navigationStack = new List<NavigationNode>();
+        private readonly List<UIView> _navigationStack = new List<UIView>();
+        private readonly Dictionary<UIView, List<UIView>> _ownedViewsByWindow = new Dictionary<UIView, List<UIView>>();
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
         private readonly HashSet<UILayer> _nonCoveringLayers = new HashSet<UILayer>();
 
@@ -35,14 +28,8 @@ namespace GameEngine
         private bool _initialized;
         private bool _suspendPendingOpen;
 
-        /// <summary>跳转深度上限。达到上限后跳转仍会执行，但会触发 <see cref="OnJumpDepthLimitReached"/>。</summary>
-        public int MaxJumpDepth { get; set; } = 2;
-
-        /// <summary>当前跳转深度（仍在导航栈中的跳转节点数量）。</summary>
-        public int CurrentJumpDepth { get; private set; }
-
-        /// <summary>达到跳转深度上限时触发，订阅方应弹出“已达到跳转上限”的提示。</summary>
-        public event Action OnJumpDepthLimitReached;
+        /// <summary>界面关闭并从 UIManager 移除后触发。</summary>
+        public event Action<UIView> ViewClosed;
 
         /// <summary>当前已打开（顶层）界面的数量。</summary>
         public int OpenViewCount => _navigationStack.Count;
@@ -98,10 +85,14 @@ namespace GameEngine
 
         // ── 打开 ────────────────────────────────────────────────────────────────
 
-        /// <summary>按指定界面类型打开界面，压入对应层级。每次调用创建一个新实例。</summary>
-        public TView OpenView<TView>(UIViewData data = null) where TView : UIView, new()
+        /// <summary>
+        /// 按指定界面类型打开界面。有效的 ownerWindow 必须是已打开的 <see cref="UILayer.Window"/> 界面；
+        /// 无效 ownerWindow 会被视为 null，不影响界面打开。附属界面随 ownerWindow 隐藏、恢复和关闭。
+        /// </summary>
+        public TView OpenView<TView>(UIViewData data = null, UIView ownerWindow = null) where TView : UIView, new()
         {
-            return OpenInternal(typeof(TView), data, false, null) as TView;
+            ownerWindow = NormalizeOwnerWindow(ownerWindow);
+            return OpenInternal(typeof(TView), data, ownerWindow) as TView;
         }
 
         // ── 同层队列 ────────────────────────────────────────────────────────────
@@ -109,9 +100,10 @@ namespace GameEngine
         /// <summary>
         /// 将界面加入对应层级的队列。该层为空时立即打开，否则等待；当该层最上层界面关闭且层内清空后，逐个打开队列中的下一个。
         /// </summary>
-        public void EnqueueOpen<TView>(UIViewData data = null) where TView : UIView, new()
+        public void EnqueueOpen<TView>(UIViewData data = null, UIView ownerWindow = null) where TView : UIView, new()
         {
-            EnqueueInternal(typeof(TView), data, false, null);
+            ownerWindow = NormalizeOwnerWindow(ownerWindow);
+            EnqueueInternal(typeof(TView), data, ownerWindow);
         }
 
         // ── 关闭 ────────────────────────────────────────────────────────────────
@@ -125,7 +117,7 @@ namespace GameEngine
                 return false;
             }
 
-            CloseInternal(_navigationStack[_navigationStack.Count - 1].View);
+            CloseInternal(_navigationStack[_navigationStack.Count - 1]);
             return true;
         }
 
@@ -138,7 +130,7 @@ namespace GameEngine
                 return false;
             }
 
-            if (!_navigationStack.Exists(node => node.View == view))
+            if (!_navigationStack.Contains(view))
             {
                 Log.Warning($"[UIManager] 界面 {view.GetType().Name} 未打开，忽略关闭请求。");
                 return false;
@@ -153,9 +145,9 @@ namespace GameEngine
         {
             for (int i = _navigationStack.Count - 1; i >= 0; i--)
             {
-                if (_navigationStack[i].View is TView)
+                if (_navigationStack[i] is TView)
                 {
-                    CloseInternal(_navigationStack[i].View);
+                    CloseInternal(_navigationStack[i]);
                     return true;
                 }
             }
@@ -205,12 +197,12 @@ namespace GameEngine
                 UIView[] views = new UIView[_navigationStack.Count];
                 for (int i = 0; i < views.Length; i++)
                 {
-                    views[i] = _navigationStack[i].View;
+                    views[i] = _navigationStack[i];
                 }
 
                 for (int i = views.Length - 1; i >= 0; i--)
                 {
-                    if (_navigationStack.Exists(node => node.View == views[i]))
+                    if (_navigationStack.Contains(views[i]))
                     {
                         CloseInternal(views[i]);
                     }
@@ -220,14 +212,6 @@ namespace GameEngine
             {
                 _suspendPendingOpen = previousSuspendState;
             }
-        }
-
-        // ── 获取途径跳转 ────────────────────────────────────────────────────────
-
-        /// <summary>通过获取途径跳转到指定界面。每次跳转推进 <see cref="CurrentJumpDepth"/>，达到 <see cref="MaxJumpDepth"/> 后触发 <see cref="OnJumpDepthLimitReached"/>。</summary>
-        public void NavigateTo<TView>(UIViewData data = null) where TView : UIView, new()
-        {
-            NavigateInternal(typeof(TView), data, null);
         }
 
         // ── 界面组合 ────────────────────────────────────────────────────────────
@@ -273,7 +257,7 @@ namespace GameEngine
         {
             for (int i = 0; i < _navigationStack.Count; i++)
             {
-                if (_navigationStack[i].View is TView)
+                if (_navigationStack[i] is TView)
                 {
                     return true;
                 }
@@ -285,7 +269,7 @@ namespace GameEngine
         /// <summary>指定界面是否已打开。</summary>
         public bool IsOpen(UIView view)
         {
-            return view != null && _navigationStack.Exists(node => node.View == view);
+            return view != null && _navigationStack.Contains(view);
         }
 
         // ── Tick ────────────────────────────────────────────────────────────────
@@ -330,7 +314,7 @@ namespace GameEngine
             _layerRoots.Clear();
             _layerStacks.Clear();
             _navigationStack.Clear();
-            CurrentJumpDepth = 0;
+            _ownedViewsByWindow.Clear();
         }
 
         public void Login()
@@ -345,28 +329,15 @@ namespace GameEngine
 
         // ── 内部实现 ────────────────────────────────────────────────────────────
 
-        private void NavigateInternal(Type viewType, UIViewData data, string source)
-        {
-            UIView view = OpenInternal(viewType, data, true, source);
-            if (view == null)
-            {
-                return;
-            }
-
-            CurrentJumpDepth++;
-            if (CurrentJumpDepth >= MaxJumpDepth)
-            {
-                OnJumpDepthLimitReached?.Invoke();
-            }
-        }
-
-        private UIView OpenInternal(Type viewType, UIViewData data, bool isJump, string source)
+        private UIView OpenInternal(Type viewType, UIViewData data, UIView ownerWindow)
         {
             if (!_initialized)
             {
                 Log.Error("[UIManager] 尚未初始化，无法打开界面。请先调用 Initialize。");
                 return null;
             }
+
+            ownerWindow = NormalizeOwnerWindow(ownerWindow);
 
             UIView view = InstantiateView(viewType, data);
             if (view == null)
@@ -376,18 +347,20 @@ namespace GameEngine
 
             view.Open();
 
+            view.OwnerWindow = ownerWindow;
             UILayerStack stack = GetLayerStack(view.Layer);
             stack.PushView(view);
-            _navigationStack.Add(new NavigationNode { View = view, IsJump = isJump, Source = source });
+            _navigationStack.Add(view);
+            AddOwnedView(ownerWindow, view);
 
             RefreshLayers();
 
-            Log.Debug($"[UIManager] 打开界面 type={viewType.Name} layer={view.Layer} jump={isJump}");
+            Log.Debug($"[UIManager] 打开界面 type={viewType.Name} layer={view.Layer}");
 
             return view;
         }
 
-        private void EnqueueInternal(Type viewType, UIViewData data, bool isJump, string source)
+        private void EnqueueInternal(Type viewType, UIViewData data, UIView ownerWindow)
         {
             if (!_initialized)
             {
@@ -398,11 +371,11 @@ namespace GameEngine
             UILayerStack stack = GetLayerStack(ResolveLayer(viewType));
             if (stack.IsEmpty)
             {
-                OpenInternal(viewType, data, isJump, source);
+                OpenInternal(viewType, data, ownerWindow);
             }
             else
             {
-                stack.EnqueuePending(new UIOpenInfo(viewType, data, isJump, source));
+                stack.EnqueuePending(new UIOpenInfo(viewType, data, ownerWindow));
             }
         }
 
@@ -417,7 +390,7 @@ namespace GameEngine
             while (stack.PendingCount > 0)
             {
                 UIOpenInfo info = stack.DequeuePending();
-                UIView view = OpenInternal(info.ViewType, info.Data, info.IsJump, info.Source);
+                UIView view = OpenInternal(info.ViewType, info.Data, info.OwnerWindow);
                 if (view != null)
                 {
                     return;
@@ -427,6 +400,23 @@ namespace GameEngine
 
         private void CloseInternal(UIView view)
         {
+            bool previousSuspendState = _suspendPendingOpen;
+            if (_ownedViewsByWindow.ContainsKey(view))
+            {
+                _suspendPendingOpen = true;
+            }
+
+            try
+            {
+                CloseOwnedViews(view);
+            }
+            finally
+            {
+                _suspendPendingOpen = previousSuspendState;
+            }
+
+            RemoveOwnedView(view);
+
             // 子界面与 Widget 必须先于父界面关闭；Widget 的池化由独立管理器负责。
             view.ChildUIManager?.Close();
             UIWidgetManager.Instance.CloseByParent(view);
@@ -440,6 +430,7 @@ namespace GameEngine
 
             // 生命周期关闭并销毁实体
             CloseBrickSafely(view);
+            InvokeViewClosed(view);
 
             RefreshLayers();
 
@@ -506,20 +497,98 @@ namespace GameEngine
             return view;
         }
 
+        private UIView NormalizeOwnerWindow(UIView ownerWindow)
+        {
+            if (ownerWindow == null)
+            {
+                return null;
+            }
+
+            if (ownerWindow.Layer != UILayer.Window)
+            {
+                Log.Warning($"[UIManager] ownerWindow {ownerWindow.GetType().Name} 不在 UILayer.Window，按非附属界面打开。");
+                return null;
+            }
+
+            if (!IsOpen(ownerWindow))
+            {
+                Log.Warning($"[UIManager] ownerWindow {ownerWindow.GetType().Name} 未打开，按非附属界面打开。");
+                return null;
+            }
+
+            return ownerWindow;
+        }
+
+        private void AddOwnedView(UIView ownerWindow, UIView view)
+        {
+            if (ownerWindow == null)
+            {
+                return;
+            }
+
+            if (!_ownedViewsByWindow.TryGetValue(ownerWindow, out List<UIView> ownedViews))
+            {
+                ownedViews = new List<UIView>();
+                _ownedViewsByWindow[ownerWindow] = ownedViews;
+            }
+
+            ownedViews.Add(view);
+        }
+
+        private void CloseOwnedViews(UIView ownerWindow)
+        {
+            if (!_ownedViewsByWindow.TryGetValue(ownerWindow, out List<UIView> ownedViews))
+            {
+                return;
+            }
+
+            _ownedViewsByWindow.Remove(ownerWindow);
+            UIView[] views = ownedViews.ToArray();
+            for (int i = views.Length - 1; i >= 0; i--)
+            {
+                if (IsOpen(views[i]))
+                {
+                    CloseInternal(views[i]);
+                }
+            }
+        }
+
+        private void RemoveOwnedView(UIView view)
+        {
+            UIView ownerWindow = view.OwnerWindow;
+            view.OwnerWindow = null;
+            if (ownerWindow == null || !_ownedViewsByWindow.TryGetValue(ownerWindow, out List<UIView> ownedViews))
+            {
+                return;
+            }
+
+            ownedViews.Remove(view);
+            if (ownedViews.Count == 0)
+            {
+                _ownedViewsByWindow.Remove(ownerWindow);
+            }
+        }
+
+        private bool IsOwnerChainVisible(UIView view)
+        {
+            UIView ownerWindow = view.OwnerWindow;
+            return ownerWindow == null || ownerWindow.IsVisible;
+        }
+
         private void RemoveNavigationNode(UIView view)
         {
-            for (int i = 0; i < _navigationStack.Count; i++)
-            {
-                if (_navigationStack[i].View == view)
-                {
-                    if (_navigationStack[i].IsJump)
-                    {
-                        CurrentJumpDepth = Math.Max(0, CurrentJumpDepth - 1);
-                    }
+            _navigationStack.Remove(view);
+        }
 
-                    _navigationStack.RemoveAt(i);
-                    return;
-                }
+        private void InvokeViewClosed(UIView view)
+        {
+            try
+            {
+                ViewClosed?.Invoke(view);
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[UIManager] ViewClosed 回调异常，界面: {view.GetType().Name}。", exception);
             }
         }
 
@@ -596,7 +665,7 @@ namespace GameEngine
                 for (int i = 0; i < count; i++)
                 {
                     UIView view = stack.GetView(i);
-                    bool shouldShow = layerVisible && i == count - 1;
+                    bool shouldShow = layerVisible && i == count - 1 && IsOwnerChainVisible(view);
                     if (shouldShow && !view.IsVisible)
                     {
                         view.Show();
