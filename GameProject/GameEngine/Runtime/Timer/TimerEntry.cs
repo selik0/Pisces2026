@@ -8,6 +8,7 @@ namespace GameEngine
     /// </summary>
     public sealed class TimerEntry
     {
+        private const int MaxCallbacksPerTick = 8;
         private static int _nextId = 1;
 
         private readonly Action _callback;
@@ -76,6 +77,7 @@ namespace GameEngine
 
         /// <summary>
         /// 推进时间，到期时触发回调并更新自身状态。
+        /// 重复定时器会补发本帧跨过的触发点，但单帧最多执行 <see cref="MaxCallbacksPerTick"/> 次，避免长时间卡顿后阻塞主线程。
         /// </summary>
         public void Tick()
         {
@@ -85,36 +87,50 @@ namespace GameEngine
             }
 
             _remaining -= _useTimeScale ? UnityEngine.Time.deltaTime : UnityEngine.Time.unscaledDeltaTime;
-            if (_remaining >= 0f)
+            if (_remaining > 0f)
             {
                 return;
             }
 
+            int callbackCount = 0;
+            while (!_isDone && _remaining <= 0f && callbackCount < MaxCallbacksPerTick)
+            {
+                callbackCount++;
+                InvokeCallback();
+
+                bool maxReached = _repeat && _maxRepeat > 0 && _repeatCount >= _maxRepeat;
+                if (!_repeat || maxReached)
+                {
+                    _isDone = true;
+                    break;
+                }
+
+                if (_interval <= 0f)
+                {
+                    // 零间隔重复定时器每帧最多触发一次，避免同一 Tick 无限循环。
+                    _remaining = 0f;
+                    break;
+                }
+
+                // 保留负的剩余时间，使低帧率下跨过的触发点可在本帧按顺序补发。
+                _remaining += _interval;
+            }
+        }
+
+        private void InvokeCallback()
+        {
             try
             {
                 _callback();
-                _repeatCount++;
-
-                Log.Debug($"[Timer] Fired  #{Id}  repeatCount={_repeatCount}");
             }
             catch (Exception ex)
             {
                 Log.Error($"[Timer] Exception in timer #{Id}", ex);
             }
-
-            bool maxReached = _repeat && _maxRepeat > 0 && _repeatCount >= _maxRepeat;
-            if (!_repeat || maxReached)
+            finally
             {
-                _isDone = true;
-            }
-            else
-            {
-                // 累积误差补偿：用负的 Remaining 补入下一轮
-                _remaining += _interval;
-                if (_remaining < 0f)
-                {
-                    _remaining = 0f;
-                }
+                // 回调抛异常也算一次触发，确保 maxRepeat 能可靠终止。
+                _repeatCount++;
             }
         }
     }

@@ -17,8 +17,10 @@ namespace GameNative
         private static readonly byte[] AuthenticationContext = Encoding.ASCII.GetBytes("GameNative.LocalDataStore.Authentication.v1");
 
         private readonly string _rootDirectory;
+#if GAME_RELEASE
         private readonly byte[] _encryptionKey;
         private readonly byte[] _authenticationKey;
+#endif
         private readonly ILocalDataSerializer _serializer;
 
         /// <param name="rootDirectory">本地数据根目录，通常传入 <see cref="FileSystem.PersistentRoot"/>。</param>
@@ -31,14 +33,16 @@ namespace GameNative
                 throw new ArgumentException("Local data root directory cannot be empty.", nameof(rootDirectory));
             }
 
-            ValidateEncryptionKey(encryptionKey);
             _rootDirectory = Path.GetFullPath(rootDirectory);
+#if GAME_RELEASE
+            ValidateEncryptionKey(encryptionKey);
             _encryptionKey = (byte[])encryptionKey.Clone();
             _authenticationKey = DeriveAuthenticationKey(_encryptionKey);
+#endif
             _serializer = serializer ?? new UnityJsonLocalDataSerializer();
         }
 
-        /// <summary>加密并保存自定义相对路径的数据。</summary>
+        /// <summary>保存自定义相对路径的数据；仅在定义 GAME_RELEASE 时加密并校验完整性。</summary>
         public void Save<T>(string relativePath, T data) where T : class
         {
             if (data == null)
@@ -51,7 +55,7 @@ namespace GameNative
             WriteAtomically(path, CreateFileData(plainData));
         }
 
-        /// <summary>读取、校验并解密自定义相对路径的数据。</summary>
+        /// <summary>读取自定义相对路径的数据；仅在定义 GAME_RELEASE 时校验并解密。</summary>
         public T Load<T>(string relativePath) where T : class
         {
             if (!Exists(relativePath))
@@ -80,6 +84,9 @@ namespace GameNative
 
         private byte[] CreateFileData(byte[] plainData)
         {
+#if !GAME_RELEASE
+            return plainData;
+#else
             byte[] encryptedData = AesCrypto.Encrypt(plainData, _encryptionKey);
 
             using (MemoryStream stream = new MemoryStream())
@@ -96,10 +103,19 @@ namespace GameNative
                 writer.Flush();
                 return stream.ToArray();
             }
+#endif
         }
 
         private byte[] ParseFileData(byte[] fileData)
         {
+#if !GAME_RELEASE
+            if (fileData == null)
+            {
+                throw new InvalidDataException("Local data file is incomplete.");
+            }
+
+            return fileData;
+#else
             int minimumLength = Magic.Length + sizeof(int) * 2 + SignatureSize;
             if (fileData == null || fileData.Length < minimumLength)
             {
@@ -136,6 +152,7 @@ namespace GameNative
 
                 return AesCrypto.Decrypt(reader.ReadBytes(encryptedLength), _encryptionKey);
             }
+#endif
         }
 
         private static void WriteAtomically(string path, byte[] data)
@@ -219,6 +236,7 @@ namespace GameNative
             return Path.Combine("Saves", slot + ".dat");
         }
 
+#if GAME_RELEASE
         private byte[] ComputeSignature(byte[] data, int count = -1)
         {
             using (HMACSHA256 hmac = new HMACSHA256(_authenticationKey))
@@ -234,6 +252,7 @@ namespace GameNative
                 return hmac.ComputeHash(AuthenticationContext);
             }
         }
+#endif
 
         private static bool FixedTimeEquals(byte[] data, int offset, byte[] expected)
         {
@@ -251,6 +270,7 @@ namespace GameNative
             return difference == 0;
         }
 
+#if GAME_RELEASE
         private static void ValidateEncryptionKey(byte[] key)
         {
             if (key == null)
@@ -263,6 +283,7 @@ namespace GameNative
                 throw new ArgumentException("AES key must be 16, 24, or 32 bytes.", nameof(key));
             }
         }
+#endif
 
         private static void DeleteIfExists(string path)
         {

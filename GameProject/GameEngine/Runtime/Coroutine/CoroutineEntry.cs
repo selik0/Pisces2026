@@ -16,6 +16,8 @@ namespace GameEngine
         private IYieldInstruction _currentYield;
         private bool _waitNextFrame;
         private bool _isDone;
+        private bool _isAdvancing;
+        private bool _disposeRequested;
 
         /// <summary>全局唯一 ID，用于停止和日志区分。</summary>
         public int Id { get; }
@@ -45,7 +47,22 @@ namespace GameEngine
         /// <summary>停止该协程。若已完成则无效。</summary>
         public void Stop()
         {
+            if (_isDone && _stack.Count == 0)
+            {
+                return;
+            }
+
             _isDone = true;
+            _currentYield = null;
+            _waitNextFrame = false;
+
+            if (_isAdvancing)
+            {
+                _disposeRequested = true;
+                return;
+            }
+
+            DisposeStack();
         }
 
         /// <summary>
@@ -53,19 +70,41 @@ namespace GameEngine
         /// </summary>
         public void Tick()
         {
-            if (_isDone || !Advance())
+            if (_isDone)
+            {
+                return;
+            }
+
+            _isAdvancing = true;
+            try
+            {
+                if (!Advance())
+                {
+                    _isDone = true;
+                }
+            }
+            catch (Exception ex)
             {
                 _isDone = true;
+                Log.Error($"[Coroutine] Exception in #{Id}", ex);
+            }
+            finally
+            {
+                _isAdvancing = false;
+                if (_disposeRequested || _isDone)
+                {
+                    _disposeRequested = false;
+                    DisposeStack();
+                }
             }
         }
 
         private bool Advance()
         {
-            // yield return null 或未知对象会设置该标记，当前帧只负责消耗等待状态。
+            // null、NextFrame 或未知对象在产生它们的当帧返回；下一次 Tick 应继续推进。
             if (_waitNextFrame)
             {
                 _waitNextFrame = false;
-                return true;
             }
 
             // 先推进上一帧产生的等待指令。指令未完成时，协程保持暂停。
@@ -90,6 +129,10 @@ namespace GameEngine
                 {
                     // MoveNext 执行协程方法，Current 保存本次 yield 的对象。
                     hasNext = top.MoveNext();
+                    if (_isDone)
+                    {
+                        return false;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -100,8 +143,9 @@ namespace GameEngine
 
                 if (!hasNext)
                 {
-                    // 当前迭代器执行完毕，返回父级迭代器继续执行。
+                    // 当前迭代器执行完毕，先释放其资源，再返回父级迭代器继续执行。
                     _stack.Pop();
+                    DisposeEnumerator(top);
                     continue;
                 }
 
@@ -122,7 +166,14 @@ namespace GameEngine
 
                 if (current is IYieldInstruction instruction)
                 {
-                    // 自定义等待指令在首次产生时立即推进一次，避免零时长指令额外等待一帧。
+                    if (instruction is WaitForFrames)
+                    {
+                        // 等待帧数从下一次 Tick 开始消耗，避免 WaitForFrames(1) 在当前帧立即完成。
+                        _currentYield = instruction;
+                        return true;
+                    }
+
+                    // 时间和条件类指令在首次产生时立即检查，零时长或已满足的条件无需额外等待一帧。
                     instruction.Tick();
                     if (!instruction.IsCompleted)
                     {
@@ -150,6 +201,31 @@ namespace GameEngine
 
             // 所有迭代器都已执行完毕，协程结束。
             return false;
+        }
+
+        private void DisposeStack()
+        {
+            while (_stack.Count > 0)
+            {
+                DisposeEnumerator(_stack.Pop());
+            }
+        }
+
+        private void DisposeEnumerator(IEnumerator enumerator)
+        {
+            if (!(enumerator is IDisposable disposable))
+            {
+                return;
+            }
+
+            try
+            {
+                disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[Coroutine] Exception while disposing #{Id}", ex);
+            }
         }
     }
 }

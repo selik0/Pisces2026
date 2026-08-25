@@ -20,9 +20,15 @@ namespace GameEngine
 
         private readonly LocalDataStore _store;
         private readonly Dictionary<Type, BaseSaveData> _cacheDict = new Dictionary<Type, BaseSaveData>();
+        private string _roleIDStr = "0";
         public LocalDataManager()
         {
             _store = new LocalDataStore(FileSystem.PersistentRoot, EncryptionKey);
+        }
+
+        public void SetRoleId<T>(T roleID)
+        {
+            _roleIDStr = roleID.ToString();
         }
 
         /// <summary>保存本地数据，数据类型决定存储文件。</summary>
@@ -34,7 +40,8 @@ namespace GameEngine
         /// <summary>读取本地数据，数据类型决定存储文件。</summary>
         public T Load<T>() where T : BaseSaveData, new()
         {
-            if (_cacheDict.TryGetValue(typeof(T), out BaseSaveData data))
+            var dataType = typeof(T);
+            if (_cacheDict.TryGetValue(dataType, out BaseSaveData data))
             {
                 return (T)data;
             }
@@ -42,10 +49,14 @@ namespace GameEngine
             var path = GetRelativePath<T>();
             if (!_store.Exists(path))
             {
-                return new T();
+                data = new T();
+                _cacheDict.Add(dataType, data);
+                return (T)data;
             }
 
-            return _store.Load<T>(path);
+            data = _store.Load<T>(path);
+            _cacheDict.Add(dataType, data);
+            return (T)data;
         }
 
         /// <summary>删除指定类型的本地数据。</summary>
@@ -54,7 +65,7 @@ namespace GameEngine
             _store.Delete(GetRelativePath<T>());
         }
 
-        private static string GetRelativePath<T>() where T : BaseSaveData
+        private string GetRelativePath<T>() where T : BaseSaveData
         {
             Type dataType = typeof(T);
             if (dataType.IsAbstract || dataType.ContainsGenericParameters)
@@ -64,8 +75,7 @@ namespace GameEngine
 
             if (dataType.BaseType.Name == nameof(RoleSaveData))
             {
-                var roleId = 0u;
-                return Path.Combine("Saves", roleId.ToString(), $"{dataType.Name}.dat");
+                return Path.Combine("Saves", _roleIDStr, $"{dataType.Name}.dat");
             }
             return Path.Combine("Saves", $"{dataType.Name}.dat");
         }
