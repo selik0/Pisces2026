@@ -18,24 +18,24 @@ namespace GameEngine
         {
         }
 
-        public void Subscribe(int eventKey, Action callback)
+        public bool Subscribe(int eventKey, Action callback)
         {
-            SubscribeInternal(eventKey, callback);
+            return SubscribeInternal(eventKey, callback);
         }
 
-        public void Subscribe<T1>(int eventKey, Action<T1> callback)
+        public bool Subscribe<T1>(int eventKey, Action<T1> callback)
         {
-            SubscribeInternal(eventKey, callback);
+            return SubscribeInternal(eventKey, callback);
         }
 
-        public void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
+        public bool Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
         {
-            SubscribeInternal(eventKey, callback);
+            return SubscribeInternal(eventKey, callback);
         }
 
-        public void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
+        public bool Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
-            SubscribeInternal(eventKey, callback);
+            return SubscribeInternal(eventKey, callback);
         }
 
         public void Unsubscribe(int eventKey, Action callback)
@@ -58,13 +58,13 @@ namespace GameEngine
             UnsubscribeInternal(eventKey, callback);
         }
 
-        private void SubscribeInternal<TCallback>(int eventKey, TCallback callback)
+        private bool SubscribeInternal<TCallback>(int eventKey, TCallback callback)
             where TCallback : Delegate
         {
             if (callback == null)
             {
                 Log.Error("[EventManager] Subscribe failed: callback is null.");
-                return;
+                return false;
             }
 
             if (!_bindings.TryGetValue(eventKey, out EventBinding binding))
@@ -73,10 +73,7 @@ namespace GameEngine
                 _bindings.Add(eventKey, binding);
             }
 
-            if (!binding.TryAdd(callback))
-            {
-                Log.Error($"[EventManager] EventKey {eventKey} uses a different callback type.");
-            }
+            return binding.TryAdd(callback);
         }
 
         private void UnsubscribeInternal<TCallback>(int eventKey, TCallback callback)
@@ -89,7 +86,6 @@ namespace GameEngine
 
             if (!binding.TryRemove(callback, out bool isEmpty))
             {
-                Log.Error($"[EventManager] EventKey {eventKey} uses a different callback type.");
                 return;
             }
 

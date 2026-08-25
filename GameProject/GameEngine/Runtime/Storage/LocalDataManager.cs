@@ -32,8 +32,17 @@ namespace GameEngine
         }
 
         /// <summary>保存本地数据，数据类型决定存储文件。</summary>
-        public void Save<T>(T data) where T : BaseSaveData
+        public void Save<T>(T data) where T : BaseSaveData, new()
         {
+            var dataType = typeof(T);
+            if (_cacheDict.ContainsKey(dataType))
+            {
+                _cacheDict.Add(dataType, data);
+            }
+            else
+            {
+                _cacheDict[dataType] = data;
+            }
             _store.Save(GetRelativePath<T>(), data);
         }
 
@@ -47,15 +56,15 @@ namespace GameEngine
             }
 
             var path = GetRelativePath<T>();
-            if (!_store.Exists(path))
+            if (_store.Exists(path))
+            {
+                data = _store.Load<T>(path);
+            }
+            if (data == null)
             {
                 data = new T();
                 _cacheDict.Add(dataType, data);
-                return (T)data;
             }
-
-            data = _store.Load<T>(path);
-            _cacheDict.Add(dataType, data);
             return (T)data;
         }
 
@@ -63,9 +72,10 @@ namespace GameEngine
         public void Delete<T>() where T : BaseSaveData, new()
         {
             _store.Delete(GetRelativePath<T>());
+            _cacheDict.Remove(typeof(T));
         }
 
-        private string GetRelativePath<T>() where T : BaseSaveData
+        private string GetRelativePath<T>() where T : BaseSaveData, new()
         {
             Type dataType = typeof(T);
             if (dataType.IsAbstract || dataType.ContainsGenericParameters)
@@ -73,11 +83,16 @@ namespace GameEngine
                 throw new InvalidOperationException($"存档数据必须是具体类型：{dataType.FullName}");
             }
 
-            if (dataType.BaseType.Name == nameof(RoleSaveData))
+            if (IsRoleData(dataType))
             {
                 return Path.Combine("Saves", _roleIDStr, $"{dataType.Name}.dat");
             }
             return Path.Combine("Saves", $"{dataType.Name}.dat");
+        }
+
+        private static bool IsRoleData(Type dataType)
+        {
+            return typeof(RoleSaveData).IsAssignableFrom(dataType);
         }
     }
 }

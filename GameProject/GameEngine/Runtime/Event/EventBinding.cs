@@ -21,20 +21,18 @@ namespace GameEngine
 
         public bool TryAdd<TCallback>(TCallback callback) where TCallback : Delegate
         {
-            if (_callbackType != null && _callbackType != typeof(TCallback))
+            if (!VaildType<TCallback>())
             {
                 return false;
             }
 
-            _callbackType = typeof(TCallback);
-            _callbacks.Add(callback);
-            return true;
+            return _callbacks.Add(callback);
         }
 
         public bool TryRemove<TCallback>(TCallback callback, out bool isEmpty) where TCallback : Delegate
         {
             isEmpty = false;
-            if (_callbackType != typeof(TCallback))
+            if (!VaildType<TCallback>())
             {
                 return false;
             }
@@ -46,7 +44,7 @@ namespace GameEngine
 
         public bool Invoke()
         {
-            if (_callbackType != typeof(Action))
+            if (!VaildType<Action>())
             {
                 return false;
             }
@@ -71,7 +69,7 @@ namespace GameEngine
 
         public bool Invoke<T1>(T1 arg1)
         {
-            if (_callbackType != typeof(Action<T1>))
+            if (!VaildType<Action<T1>>())
             {
                 return false;
             }
@@ -96,7 +94,7 @@ namespace GameEngine
 
         public bool Invoke<T1, T2>(T1 arg1, T2 arg2)
         {
-            if (_callbackType != typeof(Action<T1, T2>))
+            if (!VaildType<Action<T1, T2>>())
             {
                 return false;
             }
@@ -121,7 +119,7 @@ namespace GameEngine
 
         public bool Invoke<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3)
         {
-            if (_callbackType != typeof(Action<T1, T2, T3>))
+            if (!VaildType<Action<T1, T2, T3>>())
             {
                 return false;
             }
@@ -142,6 +140,24 @@ namespace GameEngine
             }
 
             return true;
+        }
+
+        private bool VaildType<TCallback>() where TCallback : Delegate
+        {
+            Type expectedType = typeof(TCallback);
+            if (_callbackType == null)
+            {
+                _callbackType = expectedType;
+                return true;
+            }
+            if (_callbackType == expectedType)
+            {
+                return true;
+            }
+
+            string registeredTypeName = _callbackType.FullName;
+            Log.Error($"[EventBinding] Callback type mismatch: key={_eventKey}, registeredType={registeredTypeName}, requestedType={expectedType.FullName}.");
+            return false;
         }
     }
 }

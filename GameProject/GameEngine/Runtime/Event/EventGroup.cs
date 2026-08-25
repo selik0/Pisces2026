@@ -18,26 +18,34 @@ namespace GameEngine
 
         public void Subscribe(int eventKey, Action callback)
         {
-            _eventBus.Subscribe(eventKey, callback);
-            _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            if (_eventBus.Subscribe(eventKey, callback))
+            {
+                _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            }
         }
 
         public void Subscribe<T1>(int eventKey, Action<T1> callback)
         {
-            _eventBus.Subscribe(eventKey, callback);
-            _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            if (_eventBus.Subscribe(eventKey, callback))
+            {
+                _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            }
         }
 
         public void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
         {
-            _eventBus.Subscribe(eventKey, callback);
-            _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            if (_eventBus.Subscribe(eventKey, callback))
+            {
+                _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            }
         }
 
         public void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
-            _eventBus.Subscribe(eventKey, callback);
-            _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            if (_eventBus.Subscribe(eventKey, callback))
+            {
+                _unregisterActions.Add(() => _eventBus.Unsubscribe(eventKey, callback));
+            }
         }
 
         public void UnsubscribeAll()

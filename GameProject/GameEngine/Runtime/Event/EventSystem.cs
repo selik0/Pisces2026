@@ -15,24 +15,24 @@ namespace GameEngine
         /// <summary>全局默认 EventManager 实例。</summary>
         public static EventManager Default => EventManager.Instance;
 
-        public static void Subscribe(int eventKey, Action callback)
+        public static bool Subscribe(int eventKey, Action callback)
         {
-            Default.Subscribe(eventKey, callback);
+            return Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe<T1>(int eventKey, Action<T1> callback)
+        public static bool Subscribe<T1>(int eventKey, Action<T1> callback)
         {
-            Default.Subscribe(eventKey, callback);
+            return Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
+        public static bool Subscribe<T1, T2>(int eventKey, Action<T1, T2> callback)
         {
-            Default.Subscribe(eventKey, callback);
+            return Default.Subscribe(eventKey, callback);
         }
 
-        public static void Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
+        public static bool Subscribe<T1, T2, T3>(int eventKey, Action<T1, T2, T3> callback)
         {
-            Default.Subscribe(eventKey, callback);
+            return Default.Subscribe(eventKey, callback);
         }
 
         public static void Unsubscribe(int eventKey, Action callback)

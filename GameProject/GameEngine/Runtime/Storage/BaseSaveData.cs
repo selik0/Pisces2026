@@ -6,7 +6,7 @@ namespace GameEngine
     }
 
     /// <summary>单个角色的本地存档数据基类。</summary>
-    public abstract class RoleSaveData
+    public abstract class RoleSaveData : BaseSaveData
     {
     }
 }
