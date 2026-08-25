@@ -44,6 +44,9 @@ namespace GameEngine
         /// <summary>当前生命周期状态。</summary>
         public UIBrickState State { get; private set; } = UIBrickState.Uninitialized;
 
+        /// <summary>绑定 Canvas 的渲染顺序。</summary>
+        public int SortOrder { get; private set; }
+
         public bool IsBound => Entity != null;
         public bool IsVisible { get; private set; }
         public bool IsDestroyed => State == UIBrickState.Destroyed;
@@ -73,6 +76,7 @@ namespace GameEngine
             GameObject = entity.gameObject;
             Transform = entity.transform;
             Entity.AddDestroyListener(OnEntityDestroyed);
+            RefreshSortOrder();
 
             try
             {
@@ -103,6 +107,32 @@ namespace GameEngine
 
             State = UIBrickState.Created;
             ProcessPendingEntityDestroy();
+        }
+
+        /// <summary>设置绑定 Canvas 的渲染顺序，并启用独立排序。</summary>
+        public virtual void SetSortOrder(int sortOrder)
+        {
+            SortOrder = sortOrder;
+            RefreshSortOrder();
+        }
+
+        public virtual void RefreshSortOrder()
+        {
+            if (GameObject == null)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.RefreshSortOrder failed: GameObject is null, state={State}, sortOrder={SortOrder}.");
+                return;
+            }
+
+            Canvas canvas = GameObject.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                Log.Error($"[UIBrick] {GetType().Name}.RefreshSortOrder failed: Canvas is missing on GameObject {GameObject.name}, state={State}, sortOrder={SortOrder}.");
+                return;
+            }
+
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = SortOrder;
         }
 
         /// <summary>

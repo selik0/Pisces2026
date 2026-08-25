@@ -20,11 +20,10 @@ namespace GameEngine
         private readonly Dictionary<UILayer, UILayerStack> _layerStacks = new Dictionary<UILayer, UILayerStack>();
         private readonly List<UIView> _navigationStack = new List<UIView>();
         private readonly Dictionary<UIView, List<UIView>> _ownedViewsByWindow = new Dictionary<UIView, List<UIView>>();
-        private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
         private readonly HashSet<UILayer> _multiVisibleLayers = new HashSet<UILayer>();
 
         private IUIViewLoader _loader;
-        private Transform _uiRoot;
+        private UIRoot _uiRoot;
         private bool _initialized;
         private bool _suspendPendingOpen;
 
@@ -67,15 +66,9 @@ namespace GameEngine
             RefreshLayers();
         }
 
-        /// <summary>初始化 UI 根节点，所有层级容器将挂在其下。</summary>
-        public void Initialize(Transform uiRoot)
+        /// <summary>使用场景中的 UI 根组件初始化。</summary>
+        public void Initialize(UIRoot uiRoot)
         {
-            if (uiRoot == null)
-            {
-                Log.Error("[UIManager] Initialize 失败：uiRoot 为 null。");
-                return;
-            }
-
             _uiRoot = uiRoot;
             _initialized = true;
 
@@ -292,7 +285,7 @@ namespace GameEngine
 
         // ── 销毁全部 ────────────────────────────────────────────────────────────
 
-        /// <summary>关闭全部界面并清空所有层级容器，保留初始化状态以便继续打开新界面。</summary>
+        /// <summary>关闭全部界面并清空层级状态，保留初始化状态以便继续打开新界面。</summary>
         public void DestroyAll()
         {
             CloseAll();
@@ -302,15 +295,6 @@ namespace GameEngine
                 stack.ClearPending();
             }
 
-            foreach (Transform root in _layerRoots.Values)
-            {
-                if (root != null)
-                {
-                    UnityEngine.Object.Destroy(root.gameObject);
-                }
-            }
-
-            _layerRoots.Clear();
             _layerStacks.Clear();
             _navigationStack.Clear();
             _ownedViewsByWindow.Clear();
@@ -468,7 +452,7 @@ namespace GameEngine
                 return null;
             }
 
-            Transform parent = GetLayerRoot(view.Layer);
+            Transform parent = _uiRoot.UICanvas.transform;
             string prefabPath = view.PrefabPath;
             if (string.IsNullOrEmpty(prefabPath))
             {
@@ -483,6 +467,9 @@ namespace GameEngine
                 return null;
             }
 
+            UILayerStack stack = GetLayerStack(view.Layer);
+            int sortOrder = stack.IsEmpty ? (int)view.Layer : stack.Top.SortOrder + 100;
+
             view.Data = data;
             view.ChildUIManager = new ChildUIManager(view, () => _loader);
             view.Create(entity);
@@ -493,6 +480,7 @@ namespace GameEngine
                 return null;
             }
 
+            view.SetSortOrder(sortOrder);
             return view;
         }
 
@@ -639,35 +627,6 @@ namespace GameEngine
         {
             _layerStacks.TryGetValue(layer, out UILayerStack stack);
             return stack;
-        }
-
-        private Transform GetLayerRoot(UILayer layer)
-        {
-            if (_layerRoots.TryGetValue(layer, out Transform root))
-            {
-                return root;
-            }
-
-            GameObject go = new GameObject($"Layer_{layer}");
-            root = go.transform;
-            if (_uiRoot != null)
-            {
-                root.SetParent(_uiRoot, false);
-            }
-
-            _layerRoots[layer] = root;
-            SortLayerRoots();
-            return root;
-        }
-
-        private void SortLayerRoots()
-        {
-            List<UILayer> layers = new List<UILayer>(_layerRoots.Keys);
-            layers.Sort((a, b) => a.CompareTo(b));
-            for (int i = 0; i < layers.Count; i++)
-            {
-                _layerRoots[layers[i]].SetSiblingIndex(i);
-            }
         }
 
         private void RefreshLayers()
