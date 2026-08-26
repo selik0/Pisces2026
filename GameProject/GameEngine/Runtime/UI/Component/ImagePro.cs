@@ -31,16 +31,15 @@ namespace GameEngine
         protected override void OnPopulateMesh(VertexHelper toFill)
         {
             base.OnPopulateMesh(toFill);
-            ToHorizontalFlip(toFill);
+            ApplyHorizontalFlip(toFill);
         }
 
-        void ToHorizontalFlip(VertexHelper toFill)
+        void ApplyHorizontalFlip(VertexHelper toFill)
         {
-            if (!_horizontalFlip)
+            if (!_horizontalFlip || overrideSprite ==null || type != Type.Simple)
             {
                 return;
             }
-
             for (int i = 0; i < toFill.currentVertCount; i++)
             {
                 UIVertex vertex = new UIVertex();

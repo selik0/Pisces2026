@@ -14,13 +14,5 @@ namespace GameEngine
         {
             vh.Clear();
         }
-
-        public override void SetMaterialDirty()
-        {
-        }
-
-        public override void SetVerticesDirty()
-        {
-        }
     }
 }
