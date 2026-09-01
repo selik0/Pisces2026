@@ -201,12 +201,12 @@ Excel 继续使用 EPPlus，相关代码放在 `GameEngineEditor`，可以复用
 
 ## 七、配置表代码生成
 
-每张表生成 `public readonly struct`，只生成只读属性、完整构造函数和直接 Decode 方法，不生成修改接口。
+每张表生成 `public sealed class`，只生成只读属性、完整构造函数和直接 Decode 方法，不生成修改接口。使用 class 而不是 struct，避免配置记录在传参、集合操作和返回值过程中的值拷贝，以及大型或嵌套值类型带来的栈空间压力。
 
 TextConfig 示例：
 
 ```csharp
-public readonly struct TextConfig
+public sealed class TextConfig
 {
     public int Id { get; }
     public byte ParameterCount { get; }
@@ -231,7 +231,7 @@ public readonly struct TextConfig
 
 生成要求：
 
-- 使用 readonly struct；
+- 使用 sealed class；
 - 使用只读属性；
 - Decode 按 Excel 字段顺序直接生成；
 - 不使用反射；
@@ -312,7 +312,7 @@ Tools/Game/Generate All
 - 重复 MessageId 和重复主键检测；
 - LoginRequest/LoginResponse 编码解码 round-trip；
 - GetEncodedSize 与实际写入长度一致；
-- TextConfig Excel 到二进制再到 struct 的端到端验证；
+- TextConfig Excel 到二进制再到 class 的端到端验证；
 - ASCII、中文和空字符串；
 - UTF-8 字节长度而非字符数；
 - uint、int.MaxValue 和运行时安全上限边界；
@@ -342,7 +342,7 @@ Tools/Game/Generate All
 完成后报告：
 
 1. Schema 解析、网络代码生成和消息注册表；
-2. Excel 表头解析、配置 struct 生成和二进制导出；
+2. Excel 表头解析、配置 class 生成和二进制导出；
 3. 主要新增和修改文件；
 4. 生成的二进制布局；
 5. round-trip 和边界验证结果；
