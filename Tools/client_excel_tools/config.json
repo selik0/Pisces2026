@@ -1,0 +1,13 @@
+{
+  "excel_root": "Excel",
+  "excluded_folders": [
+    "模板_不参与转表"
+  ],
+  "common_folders": [
+    "通用"
+  ],
+  "code_dir": "GameProject/GameProto/Runtime/Config/Generated",
+  "table_dir": "GameProject/GameLogic/Runtime/Config/Generated",
+  "data_dir": "GameClient/Assets/GameAssets/Configs",
+  "data_start_row": 7
+}
