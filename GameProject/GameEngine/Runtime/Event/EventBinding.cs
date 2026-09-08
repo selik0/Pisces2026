@@ -5,14 +5,22 @@ namespace GameEngine
 {
     /// <summary>
     /// 保存同一个 EventKey 下的监听委托，并负责委托类型校验与逐个调用。
-    /// 注意：回调执行期间禁止 Subscribe / Unsubscribe 修改订阅集合，不再考虑回调中注销自己的情况
-    /// 否则遍历时枚举器会抛 InvalidOperationException；需要注销的监听器应延迟到派发结束后处理。
+    /// 回调执行期间的订阅变更会暂存，并在最外层派发完成后统一提交。
     /// </summary>
     internal sealed class EventBinding
     {
         private readonly HashSet<Delegate> _callbacks = new HashSet<Delegate>();
+        private readonly List<PendingOperation> _pendingOperations = new List<PendingOperation>();
         private readonly int _eventKey;
         private Type _callbackType;
+        private int _invokeDepth;
+        private bool _clearPending;
+
+        private sealed class PendingOperation
+        {
+            public Delegate Callback;
+            public bool IsAdd;
+        }
 
         public EventBinding(int eventKey)
         {
@@ -26,20 +34,44 @@ namespace GameEngine
                 return false;
             }
 
+            if (_invokeDepth > 0)
+            {
+                _pendingOperations.Add(new PendingOperation { Callback = callback, IsAdd = true });
+                return !_callbacks.Contains(callback);
+            }
+
             return _callbacks.Add(callback);
         }
 
-        public bool TryRemove<TCallback>(TCallback callback, out bool isEmpty) where TCallback : Delegate
+        public bool TryRemove<TCallback>(TCallback callback) where TCallback : Delegate
         {
-            isEmpty = false;
             if (!VaildType<TCallback>())
             {
                 return false;
             }
 
+            if (_invokeDepth > 0)
+            {
+                _pendingOperations.Add(new PendingOperation { Callback = callback, IsAdd = false });
+                return true;
+            }
+
             _callbacks.Remove(callback);
-            isEmpty = _callbacks.Count == 0;
             return true;
+        }
+
+        public void Clear()
+        {
+            if (_invokeDepth > 0)
+            {
+                _clearPending = true;
+                _pendingOperations.Clear();
+                return;
+            }
+
+            _callbacks.Clear();
+            _pendingOperations.Clear();
+            _clearPending = false;
         }
 
         public bool Invoke()
@@ -49,19 +81,17 @@ namespace GameEngine
                 return false;
             }
 
-            // 直接遍历订阅集合，不做快照：
-            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
-            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
-            foreach (Delegate callback in _callbacks)
+            _invokeDepth++;
+            try
             {
-                try
+                foreach (Delegate callback in _callbacks)
                 {
-                    ((Action)callback)();
+                    InvokeCallback(() => ((Action)callback)(), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
                 }
-                catch (Exception caughtException)
-                {
-                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
-                }
+            }
+            finally
+            {
+                EndInvoke();
             }
 
             return true;
@@ -74,19 +104,17 @@ namespace GameEngine
                 return false;
             }
 
-            // 直接遍历订阅集合，不做快照：
-            // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
-            // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
-            foreach (Delegate callback in _callbacks)
+            _invokeDepth++;
+            try
             {
-                try
+                foreach (Delegate callback in _callbacks)
                 {
-                    ((Action<T1>)callback)(arg1);
+                    InvokeCallback(() => ((Action<T1>)callback)(arg1), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
                 }
-                catch (Exception caughtException)
-                {
-                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
-                }
+            }
+            finally
+            {
+                EndInvoke();
             }
 
             return true;
@@ -102,16 +130,17 @@ namespace GameEngine
             // 直接遍历订阅集合，不做快照：
             // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
             // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
-            foreach (Delegate callback in _callbacks)
+            _invokeDepth++;
+            try
             {
-                try
+                foreach (Delegate callback in _callbacks)
                 {
-                    ((Action<T1, T2>)callback)(arg1, arg2);
+                    InvokeCallback(() => ((Action<T1, T2>)callback)(arg1, arg2), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
                 }
-                catch (Exception caughtException)
-                {
-                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
-                }
+            }
+            finally
+            {
+                EndInvoke();
             }
 
             return true;
@@ -127,19 +156,64 @@ namespace GameEngine
             // 直接遍历订阅集合，不做快照：
             // 回调执行期间禁止 Subscribe / Unsubscribe 修改本集合，否则枚举器会抛 InvalidOperationException。
             // 需要注销的监听器应延迟到本次派发结束之后处理（例如用标志位收集后统一注销）。
-            foreach (Delegate callback in _callbacks)
+            _invokeDepth++;
+            try
             {
-                try
+                foreach (Delegate callback in _callbacks)
                 {
-                    ((Action<T1, T2, T3>)callback)(arg1, arg2, arg3);
+                    InvokeCallback(() => ((Action<T1, T2, T3>)callback)(arg1, arg2, arg3), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
                 }
-                catch (Exception caughtException)
-                {
-                    Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={callback.Method.DeclaringType}.{callback.Method.Name}", caughtException);
-                }
+            }
+            finally
+            {
+                EndInvoke();
             }
 
             return true;
+        }
+
+        private void EndInvoke()
+        {
+            _invokeDepth--;
+            if (_invokeDepth != 0)
+            {
+                return;
+            }
+
+            if (_clearPending)
+            {
+                _callbacks.Clear();
+                _pendingOperations.Clear();
+                _clearPending = false;
+                return;
+            }
+
+            for (int i = 0; i < _pendingOperations.Count; i++)
+            {
+                PendingOperation operation = _pendingOperations[i];
+                if (operation.IsAdd)
+                {
+                    _callbacks.Add(operation.Callback);
+                }
+                else
+                {
+                    _callbacks.Remove(operation.Callback);
+                }
+            }
+
+            _pendingOperations.Clear();
+        }
+
+        private void InvokeCallback(Action callback, string listenerName)
+        {
+            try
+            {
+                callback();
+            }
+            catch (Exception caughtException)
+            {
+                Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={listenerName}", caughtException);
+            }
         }
 
         private bool VaildType<TCallback>() where TCallback : Delegate
