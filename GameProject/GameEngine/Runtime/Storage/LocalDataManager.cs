@@ -37,11 +37,11 @@ namespace GameEngine
             var dataType = typeof(T);
             if (_cacheDict.ContainsKey(dataType))
             {
-                _cacheDict.Add(dataType, data);
+                _cacheDict[dataType] = data;
             }
             else
             {
-                _cacheDict[dataType] = data;
+                _cacheDict.Add(dataType, data);
             }
             _store.Save(GetRelativePath<T>(), data);
         }

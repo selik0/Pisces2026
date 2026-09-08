@@ -28,6 +28,8 @@ namespace GameEngine
 
         private readonly List<TimerEntry> _timers = new List<TimerEntry>();
         private readonly List<TimerEntry> _toAdd = new List<TimerEntry>(); // 帧内缓冲新增
+        private bool _isTicking;
+        private bool _stopAllPending;
 
         /// <summary>当前正在管理的定时器数量（包含本帧新增、不含已完成）</summary>
         public int Count => _timers.Count + _toAdd.Count;
@@ -110,8 +112,15 @@ namespace GameEngine
                 entry.Stop();
             }
 
-            _timers.Clear();
-            _toAdd.Clear();
+            if (_isTicking)
+            {
+                _stopAllPending = true;
+            }
+            else
+            {
+                _timers.Clear();
+                _toAdd.Clear();
+            }
 
             Log.Debug("[Timer] StopAll");
         }
@@ -124,6 +133,9 @@ namespace GameEngine
         /// <param name="deltaTime">帧间隔时间（秒），通常传入 Time.deltaTime</param>
         public void Tick()
         {
+            _isTicking = true;
+            try
+            {
             // 先并入上一帧新增的定时器
             if (_toAdd.Count > 0)
             {
@@ -141,9 +153,20 @@ namespace GameEngine
             }
 
             // 再顺序执行剩余定时器
-            for (int i = 0; i < _timers.Count; i++)
+                int count = _timers.Count;
+                for (int i = 0; i < count && !_stopAllPending; i++)
+                {
+                    _timers[i].Tick();
+                }
+            }
+            finally
             {
-                _timers[i].Tick();
+                _isTicking = false;
+                if (_stopAllPending)
+                {
+                    StopAll();
+                    _stopAllPending = false;
+                }
             }
         }
 

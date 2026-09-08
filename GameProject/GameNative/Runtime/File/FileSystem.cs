@@ -43,13 +43,13 @@ namespace GameNative
         /// <summary>拼接持久化目录下的完整路径</summary>
         public static string ResolvePersistentPath(string relativePath)
         {
-            return Path.Combine(PersistentRoot, relativePath);
+            return ResolveChildPath(PersistentRoot, relativePath);
         }
 
         /// <summary>拼接只读资源目录下的完整路径</summary>
         public static string ResolveStreamingPath(string relativePath)
         {
-            return Path.Combine(StreamingRoot, relativePath);
+            return ResolveChildPath(StreamingRoot, relativePath);
         }
 
         // ── 目录与文件管理 ─────────────────────────────────────────────────────
@@ -116,7 +116,14 @@ namespace GameNative
         public static void WriteAllText(string path, string content, bool append = false, Encoding encoding = null)
         {
             EnsureFileDirectory(path);
-            File.WriteAllText(path, content ?? string.Empty, encoding ?? Encoding.UTF8);
+            if (append)
+            {
+                File.AppendAllText(path, content ?? string.Empty, encoding ?? Encoding.UTF8);
+            }
+            else
+            {
+                File.WriteAllText(path, content ?? string.Empty, encoding ?? Encoding.UTF8);
+            }
         }
 
         /// <summary>读取文本（UTF-8），文件不存在时抛出异常</summary>
@@ -170,7 +177,49 @@ namespace GameNative
         public static void WriteJson<T>(string path, T value, bool prettyPrint = true)
         {
             EnsureFileDirectory(path);
-            File.WriteAllText(path, JsonUtility.ToJson(value, prettyPrint), Encoding.UTF8);
+            WriteAtomically(path, JsonUtility.ToJson(value, prettyPrint), Encoding.UTF8);
+        }
+
+        private static string ResolveChildPath(string root, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+            {
+                throw new ArgumentException("Path must be a non-empty relative path.", nameof(relativePath));
+            }
+
+            string fullPath = Path.GetFullPath(Path.Combine(root, relativePath));
+            string rootPrefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Path cannot escape its root directory.", nameof(relativePath));
+            }
+
+            return fullPath;
+        }
+
+        private static void WriteAtomically(string path, string content, Encoding encoding)
+        {
+            string temporaryPath = path + ".tmp";
+            try
+            {
+                File.WriteAllText(temporaryPath, content ?? string.Empty, encoding);
+                if (File.Exists(path))
+                {
+                    File.Replace(temporaryPath, path, null);
+                }
+                else
+                {
+                    File.Move(temporaryPath, path);
+                }
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
         }
 
         // ── 持久化目录便捷读写 ─────────────────────────────────────────────────

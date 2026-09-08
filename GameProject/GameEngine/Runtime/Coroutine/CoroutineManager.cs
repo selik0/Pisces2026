@@ -14,6 +14,8 @@ namespace GameEngine
     {
         private readonly List<CoroutineEntry> _coroutines = new List<CoroutineEntry>();
         private readonly List<CoroutineEntry> _toAdd = new List<CoroutineEntry>();
+        private bool _isTicking;
+        private bool _stopAllPending;
 
         /// <summary>当前正在管理的协程数量（包含本帧新增、不含已完成）</summary>
         public int Count => _coroutines.Count + _toAdd.Count;
@@ -25,6 +27,12 @@ namespace GameEngine
         /// <returns>协程 ID，可用于 <see cref="Stop"/> 停止</returns>
         public int Start(IEnumerator routine)
         {
+            if (routine == null)
+            {
+                Log.Error("[Coroutine] Start failed: routine is null.");
+                return -1;
+            }
+
             var entry = new CoroutineEntry(routine);
             _toAdd.Add(entry);
 
@@ -70,8 +78,15 @@ namespace GameEngine
                 entry.Stop();
             }
 
-            _coroutines.Clear();
-            _toAdd.Clear();
+            if (_isTicking)
+            {
+                _stopAllPending = true;
+            }
+            else
+            {
+                _coroutines.Clear();
+                _toAdd.Clear();
+            }
 
             Log.Debug("[Coroutine] StopAll");
         }
@@ -81,6 +96,9 @@ namespace GameEngine
         /// </summary>
         public void Tick()
         {
+            _isTicking = true;
+            try
+            {
             if (_toAdd.Count > 0)
             {
                 _coroutines.AddRange(_toAdd);
@@ -95,9 +113,20 @@ namespace GameEngine
                 }
             }
 
-            for (int i = 0; i < _coroutines.Count; i++)
+                int count = _coroutines.Count;
+                for (int i = 0; i < count && !_stopAllPending; i++)
+                {
+                    _coroutines[i].Tick();
+                }
+            }
+            finally
             {
-                _coroutines[i].Tick();
+                _isTicking = false;
+                if (_stopAllPending)
+                {
+                    StopAll();
+                    _stopAllPending = false;
+                }
             }
         }
 
