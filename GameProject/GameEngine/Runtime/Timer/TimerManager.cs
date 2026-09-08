@@ -49,7 +49,7 @@ namespace GameEngine
         /// <param name="maxRepeat">最大重复次数，≤ 0 表示无限重复。仅在 <paramref name="repeat"/> 为 true 时有效</param>
         /// <param name="useTimeScale">是否受时间缩放影响，默认 true 表示使用 scaled time</param>
         /// <returns>定时器 ID，可用于 <see cref="Stop"/> 停止；失败时返回 -1</returns>
-        public int Schedule(float delay, 
+        public int Schedule(float delay,
                              Action callback,
                              bool repeat = false,
                              float interval = 0f,
@@ -102,6 +102,12 @@ namespace GameEngine
         /// <summary>停止所有定时器。</summary>
         public void StopAll()
         {
+            if (_isTicking)
+            {
+                _stopAllPending = true;
+                return;
+            }
+            
             foreach (var entry in _timers)
             {
                 entry.Stop();
@@ -112,16 +118,8 @@ namespace GameEngine
                 entry.Stop();
             }
 
-            if (_isTicking)
-            {
-                _stopAllPending = true;
-            }
-            else
-            {
-                _timers.Clear();
-                _toAdd.Clear();
-            }
-
+            _timers.Clear();
+            _toAdd.Clear();
             Log.Debug("[Timer] StopAll");
         }
 
@@ -136,23 +134,23 @@ namespace GameEngine
             _isTicking = true;
             try
             {
-            // 先并入上一帧新增的定时器
-            if (_toAdd.Count > 0)
-            {
-                _timers.AddRange(_toAdd);
-                _toAdd.Clear();
-            }
-
-            // 移除已完成/已取消的定时器
-            for (int i = _timers.Count - 1; i >= 0; i--)
-            {
-                if (_timers[i].IsDone)
+                // 先并入上一帧新增的定时器
+                if (_toAdd.Count > 0)
                 {
-                    _timers.RemoveAt(i);
+                    _timers.AddRange(_toAdd);
+                    _toAdd.Clear();
                 }
-            }
 
-            // 再顺序执行剩余定时器
+                // 移除已完成/已取消的定时器
+                for (int i = _timers.Count - 1; i >= 0; i--)
+                {
+                    if (_timers[i].IsDone)
+                    {
+                        _timers.RemoveAt(i);
+                    }
+                }
+
+                // 再顺序执行剩余定时器
                 int count = _timers.Count;
                 for (int i = 0; i < count && !_stopAllPending; i++)
                 {

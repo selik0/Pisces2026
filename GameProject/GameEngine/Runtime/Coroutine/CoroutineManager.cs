@@ -68,6 +68,12 @@ namespace GameEngine
         /// <summary>停止所有协程。</summary>
         public void StopAll()
         {
+            if (_isTicking)
+            {
+                _stopAllPending = true;
+                return;
+            }
+
             foreach (var entry in _coroutines)
             {
                 entry.Stop();
@@ -78,15 +84,8 @@ namespace GameEngine
                 entry.Stop();
             }
 
-            if (_isTicking)
-            {
-                _stopAllPending = true;
-            }
-            else
-            {
-                _coroutines.Clear();
-                _toAdd.Clear();
-            }
+            _coroutines.Clear();
+            _toAdd.Clear();
 
             Log.Debug("[Coroutine] StopAll");
         }
@@ -99,19 +98,19 @@ namespace GameEngine
             _isTicking = true;
             try
             {
-            if (_toAdd.Count > 0)
-            {
-                _coroutines.AddRange(_toAdd);
-                _toAdd.Clear();
-            }
-
-            for (int i = _coroutines.Count - 1; i >= 0; i--)
-            {
-                if (_coroutines[i].IsDone)
+                if (_toAdd.Count > 0)
                 {
-                    _coroutines.RemoveAt(i);
+                    _coroutines.AddRange(_toAdd);
+                    _toAdd.Clear();
                 }
-            }
+
+                for (int i = _coroutines.Count - 1; i >= 0; i--)
+                {
+                    if (_coroutines[i].IsDone)
+                    {
+                        _coroutines.RemoveAt(i);
+                    }
+                }
 
                 int count = _coroutines.Count;
                 for (int i = 0; i < count && !_stopAllPending; i++)
