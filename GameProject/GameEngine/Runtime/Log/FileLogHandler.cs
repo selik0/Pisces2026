@@ -109,8 +109,7 @@ namespace GameEngine
                 return filePath;
             }
 
-            string logsDir = Path.Combine(
-                UnityEngine.Application.persistentDataPath, "Logs");
+            string logsDir = Path.Combine(PathHelper.PersistentRoot, "Logs");
             Directory.CreateDirectory(logsDir);
             return Path.Combine(logsDir, $"game_{DateTime.Now:yyyyMMdd}.log");
         }

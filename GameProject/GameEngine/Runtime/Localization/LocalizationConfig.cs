@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using UnityEngine;
 
 namespace GameEngine
@@ -114,13 +113,13 @@ namespace GameEngine
         /// <summary>本地化配置文件根目录（编辑器用 EditorData，其他平台用持久化目录）。</summary>
         private static string GetConfigRoot()
         {
-            return Application.isEditor ? GameNative.FileSystem.EditorDataPath : GameNative.FileSystem.PersistentRoot;
+            return Application.isEditor ? PathHelper.EditorDataPath : PathHelper.PersistentRoot;
         }
 
         /// <summary>读取本地化配置，文件不存在或失败时返回 null。</summary>
         public static LocalizationConfig LoadConfig()
         {
-            string path = Path.Combine(GetConfigRoot(), relativePath);
+            string path = System.IO.Path.Combine(GetConfigRoot(), relativePath);
 
             if (!GameNative.FileSystem.Exists(path))
             {
@@ -149,7 +148,7 @@ namespace GameEngine
                 return;
             }
 
-            string path = Path.Combine(GetConfigRoot(), relativePath);
+            string path = System.IO.Path.Combine(GetConfigRoot(), relativePath);
 
             try
             {

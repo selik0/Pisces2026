@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using GameNative;
 
 namespace GameEngine
@@ -23,7 +22,7 @@ namespace GameEngine
         private string _roleIDStr = "0";
         public LocalDataManager()
         {
-            _store = new LocalDataStore(FileSystem.PersistentRoot, EncryptionKey);
+            _store = new LocalDataStore(PathHelper.PersistentRoot, EncryptionKey);
         }
 
         public void SetRoleId<T>(T roleID)
@@ -85,9 +84,9 @@ namespace GameEngine
 
             if (IsRoleData(dataType))
             {
-                return Path.Combine("Saves", _roleIDStr, $"{dataType.Name}.dat");
+                return PathHelper.GetSavePath(_roleIDStr, dataType.Name, true);
             }
-            return Path.Combine("Saves", $"{dataType.Name}.dat");
+            return PathHelper.GetSavePath(_roleIDStr, dataType.Name, false);
         }
 
         private static bool IsRoleData(Type dataType)
