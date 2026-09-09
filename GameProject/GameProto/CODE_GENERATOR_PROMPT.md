@@ -7,8 +7,10 @@
 ## 一、边界和目录
 
 - 运行时代码和生成后的 C# 文件放在 `GameProject/GameProto/`。
-- Excel、EPPlus 和 Unity Editor 工具放在 `GameProject/GameEngineEditor/Editor/`。
+- Excel 生成工具必须使用 Python 实现，统一放在 `Excel/tools/`；不得使用 C#、Unity Editor 或 EPPlus 作为 Excel 生成工具的实现语言。
+- GameProto 运行时只包含运行时代码和生成后的 C# 代码，不包含 Python 运行时依赖。
 - GameProto 不得引用 UnityEditor、EPPlus 或 GameEngineEditor。
+- Python 工具负责读取 Excel、解析表头、校验数据、生成 C# 协议/配置代码，并导出二进制配置文件；生成结果写入 GameProto 或项目约定的资源目录。
 - 允许依赖方向：`GameEngineEditor -> GameProto`，禁止反向依赖和循环依赖。
 - 生成器不得使用运行时反射；生成代码必须直接按字段顺序读写。
 - 建议 Schema 输入目录：`GameProject/GameProto/Schemas/`。
@@ -161,28 +163,157 @@ public static ProtoMessage Create(uint messageId);
 
 生成输出必须稳定：相同输入产生完全相同的文件，不写入当前时间，固定排序、编码和换行，只有内容变化时才覆盖文件。
 
-## 六、Excel 表头规范
+## 六、Excel 模板结构与表头规范
 
-Excel 继续使用 EPPlus，相关代码放在 `GameEngineEditor`，可以复用 `GameProject/GameEngineEditor/Editor/Excel/ExcelHelper.cs`，但不要破坏其现有通用功能。
+必须以 `Excel/模板.xlsx` 的实际布局为准，而不是自行重新定义成之前的四行表头格式。
 
-推荐采用多行表头：
+### 6.1 模板总体结构
 
-| 行 | 内容 |
-|---|---|
-| 第1行 | 字段名 |
-| 第2行 | 字段类型 |
-| 第3行 | 字段说明 |
-| 第4行 | 导出标记，例如 `key,client` 或 `client` |
-| 第5行起 | 数据 |
+模板当前包含两个 Sheet：
 
-示例：
+- `Sheet1`：字段元数据说明和多语言/配置字段示例；
+- `Sheet2`：配置类及数据表索引配置示例。
 
-| Id | ParameterCount | Content |
-|---|---|---|
-| int | byte | string |
-| 文本ID | 参数数量 | 文本内容 |
-| key,client | client | client |
-| 1001 | 2 | 获得{0}个{1} |
+模板的特殊约定是：
+
+- 第1行描述配置类、字段用途或示例语言等表级/列级信息；
+- 第1列从第2行开始描述字段相关元数据；
+- Sheet2 的第1行描述当前 Sheet 对应的配置类名、是否只在当前 Sheet 生效、数据表索引 key 和数据分类规则；
+- Sheet2 的第2行开始按列描述字段信息；
+- 第2行包含字段显示描述；
+- 第3行包含字段名；
+- 第4行包含字段数据类型；
+- 第5行包含字段来源/父类型信息；
+- 第6行包含导出范围：`All`、`Client` 或 `Server`。
+
+Python 工具必须先读取并解析这些元数据，再生成代码和二进制数据，不能把第一行和第一列当作普通业务数据跳过。
+
+### 6.2 Sheet2 配置索引元数据
+
+Sheet2 第1行的非空列用于描述配置表级规则，当前模板示例含义为：
+
+1. 第1列：当前 Sheet 生成的配置类名，例如 `TextConfig`；括号中的说明表示类名只在当前 Sheet 有效；不同 Sheet 使用相同类名时必须告警或失败，具体行为由工具配置确定；
+2. 第2列：`TRUE` 表示类名只在当前 Sheet 有效；
+3. 第3列：数据表字典索引 key，例如 `Level.Start`，支持单个字段或最多3个字段组合，字段名通过 `.` 分隔；
+4. 第4列：数据分类索引规则，例如 `Level.Start`，单字段生成 `Dictionary<key, List<T>>`，组合字段生成嵌套 Dictionary，最多支持3级；
+5. 后续非空列可以继续作为表级生成配置，但必须明确记录并参与校验。
+
+Python 工具至少需要解析并校验：
+
+- 配置类名；
+- 类名作用域标志；
+- 主键/字典索引字段；
+- 数据分类字段；
+- 索引字段是否真实存在；
+- 索引字段数量不超过3个；
+- 组合索引字段使用 `.` 分割；
+- 索引字段类型是否适合生成 Dictionary key；
+- 不同 Sheet 的类名冲突。
+
+### 6.3 Sheet2 字段元数据
+
+Sheet2 第1列从第2行开始描述字段元数据，模板当前约定如下：
+
+- 第2行第1列：字段描述；
+- 第3行第1列：字段名；
+- 第4行第1列：字段数据类型；支持 `uint`、`int`、`bool`、`string`、`float`、`long`、`double`，并支持带具体元素类型的数组和 List，例如 `int[]`、`List<string>`、`Consume[]`、`List<RewardData>`；
+- 第5行第1列：字段来源/父类型；
+- 第6行第1列：导出范围，可为 `All`、`Client`、`Server`。
+
+实际字段列从第2列开始。字段名称可以在特定情况下重复，但必须满足模板约束：
+
+- 不同语言/分文件字段可以使用相同字段名；
+- Array 或 List 的重复字段需要结合具体集合配置识别；
+- 第6行的导出范围和字段来源必须参与重复字段判定；
+- 无法安全区分的重复字段必须报错，不能静默覆盖。
+
+字段来源/父类型的约定：
+
+- `CreateFile.后缀`：该字段按创建文件的后缀区分，例如 `CreateFile.En`；
+- `class`、`struct`、`ClassStructList`、`ClassStructArray` 等：表示对应父类型或容器类型；
+- 自定义类型使用 `自定义类型.字段名.字段类型`，例如 `Struct.ItemId.int`、`Class.ItemId.int`；
+- Python 工具必须解析这些来源信息，并在生成嵌套类型或字段名冲突诊断中使用。
+
+### 6.4 字段列解析
+
+Python 工具不能简单使用第一行作为普通字段名。必须结合行号和第一列元数据，解析第2列及之后的字段列：
+
+- 字段显示说明来自模板字段描述行；
+- 字段名来自字段名行；
+- C# 数据类型来自字段类型行；
+- 父类型/来源来自父类型行；
+- 导出范围来自导出范围行；
+- 字段对应的数据值从模板约定的数据起始行读取；
+- 空列忽略；
+- 任何一个导出字段缺少字段名或类型都必须报错；
+- C# 标识符必须合法；
+- 类型必须在生成器支持范围内；
+- `uint`、`int`、`bool`、`float`、`long`、`double` 使用固定宽度编码；
+- `string`、bytes 和数组数量/长度统一使用 `uint` 前缀。
+
+模板中的说明文字是规则的一部分，生成器实现应在代码注释或文档中保留，不得凭空将表头改造成与模板不一致的四行表头。
+
+
+Excel 生成流程必须使用 Python 实现，工具统一放在 `Excel/tools/`。不要在本功能中使用 EPPlus、C# Excel 解析器或 Unity Editor 作为生成器实现。Python 工具可以使用 `openpyxl` 读取 `.xlsx`，并使用 Python 标准库完成代码生成、二进制编码、Hash 计算和文件写入。现有 `GameProject/GameEngineEditor/Editor/Excel/ExcelHelper.cs` 不作为本生成流程的实现基础，也不要为了本功能破坏它的现有通用功能。
+
+## 6.5 数据解析和 Python 工具要求
+
+Python 工具必须使用 `Excel/模板.xlsx` 的实际布局，不能把模板简化成普通的“第一行字段名、第二行类型”格式。工具负责读取表级元数据、字段元数据、数据行，校验后生成 C# 代码和二进制文件。
+
+推荐工具文件：
+
+- `Excel/tools/generate.py`：命令行入口；
+- `Excel/tools/excel_reader.py`：模板和工作表解析；
+- `Excel/tools/code_generator.py`：C# 代码生成；
+- `Excel/tools/binary_writer.py`：二进制配置导出；
+- `Excel/tools/schema_hash.py`：规范化模型和 Schema Hash；
+- `Excel/tools/README.md`：Python 环境、参数和生成说明。
+
+可以使用 `openpyxl` 读取 `.xlsx`，二进制编码和 Hash 使用 Python 标准库。Python 工具不能依赖 Unity、EPPlus 或 GameProto DLL。
+
+模板解析规则：
+
+- 模板第一行描述配置类、数据表规则、字段用途或语言等表级/列级信息；
+- 模板第一列从第二行开始描述字段相关元数据；
+- `Sheet1` 保存字段元数据说明和字段示例；
+- `Sheet2` 保存配置类名、类名作用域、索引字段、分类字段和字段列示例；
+- Sheet2 第1行第1列为配置类名，例如 `TextConfig`；
+- Sheet2 第1行第2列为类名作用域标志，例如 `TRUE`；
+- Sheet2 第1行第3列为数据表字典索引 key，例如 `Level.Start`，最多支持3个 `.` 分隔字段；
+- Sheet2 第1行第4列为数据分类规则，例如 `Level.Start`，用于生成 `Dictionary<key, List<T>>` 或最多3层嵌套 Dictionary；
+- Sheet2 第2行从第1列开始为字段显示描述；
+- Sheet2 第3行为字段名；
+- Sheet2 第4行为字段类型；
+- Sheet2 第5行为字段父类型/来源；
+- Sheet2 第6行为导出范围：`All`、`Client` 或 `Server`；
+- Sheet2 第2列开始的每个非空列代表一个字段；
+- 从模板约定的数据起始行开始读取该字段的实际数据；
+- 第一行和第一列的说明文字必须被解析为规则，不能直接跳过。
+
+字段父类型/来源规则：
+
+- `CreateFile.后缀` 表示按创建文件后缀区分，例如 `CreateFile.En`；
+- `class`、`struct`、`ClassStructList`、`ClassStructArray` 表示字段的父类型或容器类型；
+- 自定义类型使用 `自定义类型.字段名.字段类型`，例如 `Struct.ItemId.int`、`Class.ItemId.int`；
+- 字段名允许在语言分文件或数组/List 场景下重复，但必须结合父类型、来源、导出范围和容器规则判断；无法安全区分时必须报错，不能覆盖。
+
+字段类型第一版至少支持：
+
+- `uint`、`int`、`bool`、`float`、`long`、`double`、`string`；
+- 后续可扩展具体元素类型的 `T[]` 和 `List<T>`，例如 `int[]`、`List<string>`、`Consume[]`、`List<RewardData>`；
+- 所有 string、bytes、数组或 List 的可变长度/数量前缀统一使用小端序 `uint`；
+- 固定数字按照运行时提示词中的固定字节宽度写入。
+
+Python 工具必须校验：
+
+- 配置类名和字段名是合法 C# 标识符；
+- 配置类名在不同 Sheet 的作用域和冲突；
+- 字段名、类型、父类型和导出范围不能为空或互相矛盾；
+- 索引字段存在且最多3个；
+- 类型受支持；
+- 数值范围、bool 格式、UTF-8 字节数和 uint/int 安全上限；
+- 重复主键、重复组合索引和无法区分的重复字段；
+- 每个错误包含文件、Sheet、Excel 行、列和字段名。
 
 至少支持并校验：
 
