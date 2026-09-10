@@ -1,0 +1,18 @@
+{
+  "excelRoot": "Excel",
+  "includedFolders": [
+    "通用"
+  ],
+  "excludedFolders": [
+    "模板_不参与转表"
+  ],
+  "clientCodeDirectory": "GameProject/GameProto/Runtime/Config/Generated",
+  "clientTableDirectory": "GameProject/GameLogic/Runtime/Config/Generated",
+  "serverCodeDirectory": "Server/Config/Generated",
+  "clientDataDirectory": "GameClient/Assets/GameAssets/Configs",
+  "serverDataDirectory": "Server/Config/Data",
+  "clientNamespace": "GameProto.Config.Generated",
+  "clientTableNamespace": "GameLogic.Config.Generated",
+  "serverPackage": "config",
+  "dataStartRow": 7
+}

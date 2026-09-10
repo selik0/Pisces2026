@@ -1,1 +1,0 @@
-"""GameProto Excel tooling package."""
