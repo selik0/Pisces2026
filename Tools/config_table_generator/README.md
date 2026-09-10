@@ -4,16 +4,24 @@
 
 ## 运行
 
-安装 .NET 8 SDK 后，在仓库根目录执行：
+安装 .NET 8 SDK 后，在仓库根目录分别执行代码生成和数据导出。
+
+仅根据 Excel 表头生成客户端 C# 和服务器 Go 配置代码，不解析和导出数据行：
 
 ```shell
-dotnet run --project Tools/config_table_generator/ConfigTableGenerator.csproj -- --config Tools/config_table_generator/config.json
+dotnet run --project Tools/config_table_generator/ConfigTableGenerator.csproj -- code --config Tools/config_table_generator/config.json
 ```
 
-只转换某个 Excel 子目录：
+仅解析数据行并导出客户端和服务器二进制，不生成配置类：
 
 ```shell
-dotnet run --project Tools/config_table_generator/ConfigTableGenerator.csproj -- --config Tools/config_table_generator/config.json --folder 通用
+dotnet run --project Tools/config_table_generator/ConfigTableGenerator.csproj -- data --config Tools/config_table_generator/config.json
+```
+
+只处理某个 Excel 子目录时，两种命令都可以追加：
+
+```shell
+--folder 通用
 ```
 
 ## 发布单文件
@@ -35,15 +43,28 @@ publish/linux-x64/ConfigTableGenerator
 Windows：
 
 ```powershell
-ConfigTableGenerator.exe --config config.json
+ConfigTableGenerator.exe code --config config.json
+ConfigTableGenerator.exe data --config config.json
 ```
 
 Linux：
 
 ```shell
 chmod +x ConfigTableGenerator
-./ConfigTableGenerator --config config.json
+./ConfigTableGenerator code --config config.json
+./ConfigTableGenerator data --config config.json
 ```
+
+## C# 调用接口
+
+工具程序集提供两个相互独立的公开接口：
+
+```csharp
+ConfigTableTool.GenerateCode(configPath, folder);
+ConfigTableTool.ExportData(configPath, folder);
+```
+
+`folder` 可以为 `null`，此时使用 `config.json` 中的 `includedFolders`。
 
 路径使用 `/`，配置文件中的相对路径均相对于仓库根目录。工具自动忽略 Excel 锁文件 `~$*.xlsx`，相同内容不会重复覆盖。
 
@@ -62,6 +83,8 @@ chmod +x ConfigTableGenerator
 | 7+ | 配置数据 |
 
 字段通常从 B 列开始；如果 A3 是合法字段名且 A4 是支持类型，则从 A 列开始。主键必须且只能有一个，类型固定为 `uint`。第4行支持：
+
+第3行字段名为空时，代码生成和二进制导出都会忽略整列；该列的类型、来源、导出范围和数据均不参与处理。
 
 ```text
 uint int bool string float long double

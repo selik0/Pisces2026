@@ -24,7 +24,7 @@ internal static class ExcelConfigReader
         return models;
     }
 
-    public static IReadOnlyList<ConfigOutputModel> CreateOutputs(ConfigSheetModel sheet)
+    public static IReadOnlyList<ConfigOutputModel> CreateOutputs(ConfigSheetModel sheet, bool includeData)
     {
         List<ConfigOutputModel> outputs = new();
         foreach (ExportTarget target in new[] { ExportTarget.Client, ExportTarget.Server })
@@ -43,7 +43,7 @@ internal static class ExcelConfigReader
                 .ToArray();
             if (suffixes.Length == 0)
             {
-                outputs.Add(CreateOutput(sheet, target, null, targetColumns));
+                outputs.Add(CreateOutput(sheet, target, null, targetColumns, includeData));
                 continue;
             }
 
@@ -52,7 +52,7 @@ internal static class ExcelConfigReader
                 List<PhysicalColumn> variantColumns = targetColumns
                     .Where(column => column.Source.Kind != FieldSourceKind.CreateFile || column.Source.FileSuffix == suffix)
                     .ToList();
-                outputs.Add(CreateOutput(sheet, target, suffix, variantColumns));
+                outputs.Add(CreateOutput(sheet, target, suffix, variantColumns, includeData));
             }
         }
 
@@ -92,7 +92,7 @@ internal static class ExcelConfigReader
             string typeText = Text(sheet.Cells[4, column].Value);
             string sourceText = Text(sheet.Cells[5, column].Value);
             string exportText = Text(sheet.Cells[6, column].Value);
-            if (name.Length == 0 && typeText.Length == 0 && sourceText.Length == 0 && exportText.Length == 0)
+            if (name.Length == 0)
             {
                 continue;
             }
@@ -161,7 +161,7 @@ internal static class ExcelConfigReader
         };
     }
 
-    private static ConfigOutputModel CreateOutput(ConfigSheetModel sheet, ExportTarget target, string? suffix, List<PhysicalColumn> columns)
+    private static ConfigOutputModel CreateOutput(ConfigSheetModel sheet, ExportTarget target, string? suffix, List<PhysicalColumn> columns, bool includeData)
     {
         List<LogicalField> fields = new();
         for (int index = 0; index < columns.Count;)
@@ -191,6 +191,11 @@ internal static class ExcelConfigReader
 
         List<LogicalRow> rows = new();
         HashSet<uint> keys = new();
+        if (!includeData)
+        {
+            return CreateOutputModel(sheet, target, suffix, fields, rows);
+        }
+
         foreach (PhysicalRow sourceRow in sheet.Rows)
         {
             List<object> values = fields.Select(field => ParseLogicalValue(sheet, sourceRow, field)).ToList();
@@ -202,6 +207,11 @@ internal static class ExcelConfigReader
             rows.Add(new LogicalRow { ExcelRow = sourceRow.ExcelRow, Values = values });
         }
 
+        return CreateOutputModel(sheet, target, suffix, fields, rows);
+    }
+
+    private static ConfigOutputModel CreateOutputModel(ConfigSheetModel sheet, ExportTarget target, string? suffix, List<LogicalField> fields, List<LogicalRow> rows)
+    {
         return new ConfigOutputModel
         {
             SourcePath = sheet.SourcePath,
