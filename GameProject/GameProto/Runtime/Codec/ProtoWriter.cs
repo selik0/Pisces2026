@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 
 namespace GameProto
 {
@@ -60,14 +59,28 @@ namespace GameProto
         public void WriteString(string value)
         {
             value = value ?? string.Empty;
-            int byteCount = Encoding.UTF8.GetByteCount(value);
-            EnsureVariableLength(byteCount, ProtoRuntimeLimits.DefaultMaxStringBytes, "字符串");
+            int byteCount;
+            try
+            {
+                byteCount = ProtoEncoding.Utf8.GetByteCount(value);
+            }
+            catch (System.Text.EncoderFallbackException exception)
+            {
+                throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+            }
+
             WriteUInt32((uint)byteCount);
             EnsureCapacity(byteCount);
             if (byteCount > 0)
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(value);
-                Buffer.BlockCopy(bytes, 0, _buffer, _offset, byteCount);
+                try
+                {
+                    ProtoEncoding.Utf8.GetBytes(value, 0, value.Length, _buffer, _offset);
+                }
+                catch (System.Text.EncoderFallbackException exception)
+                {
+                    throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+                }
             }
             _offset += byteCount;
         }
@@ -75,7 +88,6 @@ namespace GameProto
         public void WriteBytes(byte[] value)
         {
             int length = value == null ? 0 : value.Length;
-            EnsureVariableLength(length, ProtoRuntimeLimits.DefaultMaxBytes, "bytes");
             WriteUInt32((uint)length);
             EnsureCapacity(length);
             if (length > 0)
@@ -97,14 +109,6 @@ namespace GameProto
             if (count < 0 || count > Remaining)
             {
                 throw new ProtoSerializationException($"写入空间不足：位置={Position}，需要={count}，剩余={Remaining}。");
-            }
-        }
-
-        private static void EnsureVariableLength(int length, int maximum, string name)
-        {
-            if (length < 0 || length > maximum)
-            {
-                throw new ProtoSerializationException($"{name}长度超出限制：{length}，最大={maximum}。");
             }
         }
     }

@@ -51,7 +51,7 @@ uint Utf8ByteLength
 byte[Utf8ByteLength] Utf8Data
 ```
 
-统一 UTF-8、无 BOM。长度表示 UTF-8 字节数，不是 C# `string.Length`。null 按空字符串处理，0 长度解码为 `string.Empty`。读取时必须检查 `uint` 到 `int` 的转换、运行时安全上限和剩余字节，禁止截断。
+统一使用严格 UTF-8、无 BOM，编码和解码遇到非法字符序列时均抛出格式异常。长度表示 UTF-8 字节数，不是 C# `string.Length`。null 按空字符串处理，0 长度解码为 `string.Empty`。读取时必须检查 `uint` 到 `int` 的转换和剩余字节，禁止截断。
 
 ### bytes
 
@@ -60,7 +60,7 @@ uint ByteLength
 byte[ByteLength] Data
 ```
 
-null 和空数组均编码为 0 长度。读取时检查 `uint`、`int.MaxValue`、安全上限和剩余字节。
+null 和空数组均编码为 0 长度。读取时检查 `uint`、`int.MaxValue` 和剩余字节。
 
 ### 数组
 
@@ -69,7 +69,7 @@ uint ElementCount
 Element[ElementCount]
 ```
 
-长度表示元素数量。读取后转换为 int 前必须检查范围和安全上限。MVP 只需要支持生成代码使用的一维数组；不实现任意 Dictionary、map、oneof、多维数组、循环引用或多态对象。
+长度表示元素数量。读取后转换为 int 前必须检查范围。MVP 只需要支持生成代码使用的一维数组；不实现任意 Dictionary、map、oneof、多维数组、循环引用或多态对象。
 
 ## 四、ProtoReader
 
@@ -116,7 +116,7 @@ Element[ElementCount]
 
 定义明确的 `ProtoSerializationException` 和配置读取所需的 `ConfigSerializationException`。不得静默吞异常。
 
-集中定义运行时安全上限，例如最大字符串字节数、最大 bytes 字节数、最大集合数量、最大 Payload 长度和最大配置记录数。uint 格式上限不意味着允许无限分配。
+不定义额外的运行时长度上限；读取时仍必须执行 uint 到 int 的范围检查和缓冲区边界检查。
 
 ## 七、网络消息运行时
 
@@ -145,7 +145,7 @@ ProtocolVersion    uint      4 bytes
 Sequence           uint      4 bytes
 ```
 
-包头固定 16 bytes，PayloadLength 不包含包头。实际运行时 Payload 受 uint、int.MaxValue 和集中安全上限共同约束。GameProto 不耦合 Socket；文档和 API 注释必须说明 TCP 一次 Receive 不等于一条消息，接收方必须先累计完整 16 bytes 包头，再按 PayloadLength 累计 Payload。
+包头固定 16 bytes，PayloadLength 不包含包头。MessageId 使用 uint。实际运行时 Payload 受 uint 和 int.MaxValue 共同约束。GameProto 不耦合 Socket；文档和 API 注释必须说明 TCP 一次 Receive 不等于一条消息，接收方必须先累计完整 16 bytes 包头，再按 PayloadLength 累计 Payload。
 
 生成无反射消息注册表，至少提供：
 
@@ -158,7 +158,7 @@ ProtoMessage Create(uint messageId);
 
 ## 九、配置文件运行时格式
 
-配置记录运行时使用 `sealed class`，而不是 struct。这样可以避免配置对象在传参、集合操作和返回值过程中的值拷贝，以及大型或嵌套值类型带来的栈空间压力。配置对象只暴露只读属性，不提供修改接口。
+配置记录运行时继承非泛型 `ConfigRecord` 并使用 `sealed class`，基类不暴露主键。配置表容器继承 `ConfigTable<TConfig>`，主键统一使用 uint，由加载代码显式传入，并统一提供 Count、TryGet、Get 和重复主键保护。记录使用 class 而不是 struct，避免配置对象在传参、集合操作和返回值过程中的值拷贝，以及大型或嵌套值类型带来的栈空间压力。配置对象只暴露只读属性，不提供修改接口。
 
 配置文件头固定 20 bytes：
 
@@ -170,7 +170,7 @@ RecordCount    uint      4 bytes
 Records        N bytes
 ```
 
-Magic 可使用固定 ASCII `GCFG`。RecordCount 转 int 前必须检查 int.MaxValue 和安全上限。整个文件不受 uint 长度前缀限制，但仍受内存和安全上限限制。每条可变字段都独立使用 uint 长度。
+Magic 可使用固定 ASCII `GCFG`。RecordCount 转 int 前必须检查 int.MaxValue。整个文件不受 uint 长度前缀限制。每条可变字段都独立使用 uint 长度。
 
 加载时必须：
 
@@ -190,7 +190,7 @@ Magic 可使用固定 ASCII `GCFG`。RecordCount 转 int 前必须检查 int.Max
 TextConfig 示例布局：
 
 ```text
-Id                  int       4 bytes
+Id                  uint      4 bytes
 ParameterCount      byte      1 byte
 ContentLength       uint      4 bytes
 Content             UTF-8     ContentLength bytes
@@ -201,12 +201,12 @@ Content             UTF-8     ContentLength bytes
 - 所有基础类型 round-trip；
 - 小端序字节布局；
 - UTF-8 中文和空字符串；
-- uint、int.MaxValue 和安全上限边界；
+- uint 和 int.MaxValue 边界；
 - Reader 越界、子区间保护、Writer 容量不足；
 - 截断数据、非法 bool、错误 Magic、版本和 SchemaHash；
 - 多余尾随字节；
 - GetEncodedSize 与实际编码长度一致；
-- 网络 Payload 和配置记录数量的安全限制。
+- 网络 Payload 和配置记录数量的 uint/int 范围检查。
 
 ## 十一、代码规范和报告
 

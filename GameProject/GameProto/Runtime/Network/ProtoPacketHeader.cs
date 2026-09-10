@@ -35,12 +35,6 @@ namespace GameProto
                 throw new ProtoSerializationException($"不支持的协议版本：{header.ProtocolVersion}。");
             }
 
-            if (header.PayloadLength > ProtoRuntimeLimits.DefaultMaxPayloadBytes)
-            {
-                throw new ProtoSerializationException(
-                    $"Payload 长度超出限制：{header.PayloadLength}，最大={ProtoRuntimeLimits.DefaultMaxPayloadBytes}。");
-            }
-
             return header;
         }
     }

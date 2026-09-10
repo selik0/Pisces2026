@@ -46,7 +46,7 @@ git diff --check
 - null 字符串按空字符串编码，0 长度解码为 `string.Empty`；
 - null bytes/数组按0长度编码；
 - 长度表示 UTF-8 字节数或元素数量，不是 C# 字符数；
-- 运行时仍必须校验 `uint`、`int.MaxValue` 和集中安全上限；
+- 运行时必须校验 `uint` 到 `int` 的转换和缓冲区剩余长度；
 - 禁止截断、整数溢出和静默接受非法数据。
 
 ## 三、自定义 Schema
@@ -82,7 +82,7 @@ MVP 支持：
 
 - namespace；
 - message 名称；
-- ushort 范围内的 MessageId；
+- uint 范围内的 MessageId；
 - 字段类型和字段名；
 - 空行和 `//` 单行注释；
 - bool、byte、sbyte、short、ushort、int、uint、long、ulong、float、double；
@@ -311,7 +311,7 @@ Python 工具必须校验：
 - 字段名、类型、父类型和导出范围不能为空或互相矛盾；
 - 索引字段存在且最多3个；
 - 类型受支持；
-- 数值范围、bool 格式、UTF-8 字节数和 uint/int 安全上限；
+- 数值范围、bool 格式、UTF-8 字节数和 uint/int 范围；
 - 重复主键、重复组合索引和无法区分的重复字段；
 - 每个错误包含文件、Sheet、Excel 行、列和字段名。
 
@@ -324,7 +324,7 @@ Python 工具必须校验：
 - 不支持类型；
 - 数值超出目标类型范围；
 - 非法 bool；
-- UTF-8 字节长度超出 uint/int 或安全上限；
+- UTF-8 字节长度超出 uint/int 范围；
 - 重复主键；
 - 错误包含 Excel 文件、Sheet、行、列和字段名。
 
@@ -332,18 +332,18 @@ Python 工具必须校验：
 
 ## 七、配置表代码生成
 
-每张表生成 `public sealed class`，只生成只读属性、完整构造函数和直接 Decode 方法，不生成修改接口。使用 class 而不是 struct，避免配置记录在传参、集合操作和返回值过程中的值拷贝，以及大型或嵌套值类型带来的栈空间压力。
+每张表生成 `public sealed class` 并继承非泛型 `ConfigRecord`。`ConfigRecord` 不暴露主键，主键由配置表加载代码根据 Excel 索引字段传给表容器。记录类只生成只读属性、完整构造函数和直接 Decode 方法，不生成修改接口。使用 class 而不是 struct，避免配置记录在传参、集合操作和返回值过程中的值拷贝，以及大型或嵌套值类型带来的栈空间压力。
 
 TextConfig 示例：
 
 ```csharp
-public sealed class TextConfig
+public sealed class TextConfig : ConfigRecord
 {
-    public int Id { get; }
+    public uint Id { get; }
     public byte ParameterCount { get; }
     public string Content { get; }
 
-    public TextConfig(int id, byte parameterCount, string content)
+    public TextConfig(uint id, byte parameterCount, string content)
     {
         Id = id;
         ParameterCount = parameterCount;
@@ -352,7 +352,7 @@ public sealed class TextConfig
 
     public static TextConfig Decode(ref ProtoReader reader)
     {
-        int id = reader.ReadInt32();
+        uint id = reader.ReadUInt32();
         byte parameterCount = reader.ReadByte();
         string content = reader.ReadString();
         return new TextConfig(id, parameterCount, content);
@@ -372,23 +372,24 @@ public sealed class TextConfig
 同时生成配置表容器，例如：
 
 ```csharp
-public sealed class TextConfigTable
+public sealed class TextConfigTable : ConfigTable<TextConfig>
 {
-    private readonly Dictionary<int, TextConfig> _items;
-    public int Count { get; }
-    public bool TryGet(int id, out TextConfig config);
-    public TextConfig Get(int id);
+    private TextConfigTable(int capacity)
+        : base(capacity)
+    {
+    }
+
     public static TextConfigTable Load(byte[] data);
 }
 ```
 
-MVP 默认只支持 int 主键；如果扩展其他主键，必须在 Schema 和文档中明确。加载时：
+配置表主键统一使用 uint。加载时：
 
 1. 校验 Magic；
 2. 校验 FormatVersion；
 3. 校验 Config Schema Hash；
 4. 读取 uint RecordCount；
-5. 转 int 前校验 int.MaxValue 和安全上限；
+5. 转 int 前校验 int.MaxValue；
 6. 预分配 Dictionary；
 7. 逐条调用生成 Decode；
 8. 检测重复 key；
@@ -406,18 +407,18 @@ RecordCount    uint      4 bytes
 Records        N bytes
 ```
 
-文件头固定 20 bytes。整个文件不受单个 uint 长度前缀限制，但仍受内存和安全上限限制。RecordCount 使用 uint。
+文件头固定 20 bytes。整个文件不受单个 uint 长度前缀限制。RecordCount 使用 uint。
 
 TextConfig 每条记录固定布局：
 
 ```text
-Id                  int       4 bytes
+Id                  uint      4 bytes
 ParameterCount      byte      1 byte
 ContentLength       uint      4 bytes
 Content             UTF-8     ContentLength bytes
 ```
 
-不得使用 `BinaryWriter.Write(string)`。必须显式计算 UTF-8 字节数，写入 uint，再写入 UTF-8 数据。超过 uint、int.MaxValue 或安全上限必须失败，禁止截断。
+不得使用 `BinaryWriter.Write(string)`。必须显式计算 UTF-8 字节数，写入 uint，再写入 UTF-8 数据。超过 uint 或 int.MaxValue 必须失败，禁止截断。
 
 所有可变字段均使用 uint 长度；数组使用 uint 元素数量；单个网络 PayloadLength 使用 uint。配置导出前完成全部解析和校验，避免只生成部分文件。只有内容变化时才写入文件。
 
@@ -446,7 +447,7 @@ Tools/Game/Generate All
 - TextConfig Excel 到二进制再到 class 的端到端验证；
 - ASCII、中文和空字符串；
 - UTF-8 字节长度而非字符数；
-- uint、int.MaxValue 和运行时安全上限边界；
+- uint 和 int.MaxValue 边界；
 - 损坏 Magic、错误 FormatVersion、错误 Schema Hash；
 - 截断数据、长度大于剩余数据、尾随多余字节；
 - 数组数量和可变字段长度溢出；

@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 
 namespace GameProto
 {
@@ -8,7 +7,6 @@ namespace GameProto
     /// </summary>
     public struct ProtoReader
     {
-        private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
         private readonly byte[] _buffer;
         private readonly int _start;
         private readonly int _end;
@@ -136,14 +134,14 @@ namespace GameProto
         public string ReadString()
         {
             uint byteLength = ReadUInt32();
-            int length = GetSafeLength(byteLength, ProtoRuntimeLimits.DefaultMaxStringBytes, "字符串");
+            int length = GetSafeLength(byteLength, "字符串");
             EnsureRemaining(length);
             string value;
             try
             {
-                value = length == 0 ? string.Empty : StrictUtf8.GetString(_buffer, _offset, length);
+                value = length == 0 ? string.Empty : ProtoEncoding.Utf8.GetString(_buffer, _offset, length);
             }
-            catch (DecoderFallbackException exception)
+            catch (System.Text.DecoderFallbackException exception)
             {
                 throw new ProtoSerializationException($"字符串包含非法 UTF-8：位置={Position}，长度={length}。", exception);
             }
@@ -154,7 +152,7 @@ namespace GameProto
         public byte[] ReadBytes()
         {
             uint byteLength = ReadUInt32();
-            int length = GetSafeLength(byteLength, ProtoRuntimeLimits.DefaultMaxBytes, "bytes");
+            int length = GetSafeLength(byteLength, "bytes");
             EnsureRemaining(length);
             byte[] value = new byte[length];
             if (length > 0)
@@ -168,14 +166,14 @@ namespace GameProto
 
         public int ReadCollectionCount()
         {
-            return GetSafeLength(ReadUInt32(), ProtoRuntimeLimits.DefaultMaxCollectionCount, "集合");
+            return GetSafeLength(ReadUInt32(), "集合");
         }
 
-        private static int GetSafeLength(uint value, int maximum, string name)
+        private static int GetSafeLength(uint value, string name)
         {
-            if (value > int.MaxValue || value > maximum)
+            if (value > int.MaxValue)
             {
-                throw new ProtoSerializationException($"{name}长度超出限制：{value}，最大={maximum}。");
+                throw new ProtoSerializationException($"{name}长度超出 int 范围：{value}。");
             }
 
             return (int)value;

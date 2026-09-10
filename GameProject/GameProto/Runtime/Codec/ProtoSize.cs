@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 
 namespace GameProto
 {
@@ -22,15 +21,24 @@ namespace GameProto
 
         public static int String(string value)
         {
-            int byteCount = Encoding.UTF8.GetByteCount(value ?? string.Empty);
-            EnsureLength(byteCount, ProtoRuntimeLimits.DefaultMaxStringBytes, "字符串");
-            return checked(4 + byteCount);
+            try
+            {
+                int byteCount = ProtoEncoding.Utf8.GetByteCount(value ?? string.Empty);
+                return checked(4 + byteCount);
+            }
+            catch (System.Text.EncoderFallbackException exception)
+            {
+                throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+            }
+            catch (OverflowException exception)
+            {
+                throw new ProtoSerializationException("字符串编码尺寸溢出。", exception);
+            }
         }
 
         public static int Bytes(byte[] value)
         {
             int length = value == null ? 0 : value.Length;
-            EnsureLength(length, ProtoRuntimeLimits.DefaultMaxBytes, "bytes");
             return checked(4 + length);
         }
 
@@ -42,22 +50,26 @@ namespace GameProto
             }
 
             int count = value == null ? 0 : value.Length;
-            EnsureLength(count, ProtoRuntimeLimits.DefaultMaxCollectionCount, "集合数量");
             int size = 4;
-            for (int i = 0; i < count; i++)
+            try
             {
-                size = checked(size + elementSize(value[i]));
+                for (int i = 0; i < count; i++)
+                {
+                    int currentElementSize = elementSize(value[i]);
+                    if (currentElementSize < 0)
+                    {
+                        throw new ProtoSerializationException($"数组元素编码尺寸不能为负数：索引={i}，尺寸={currentElementSize}。");
+                    }
+
+                    size = checked(size + currentElementSize);
+                }
+            }
+            catch (OverflowException exception)
+            {
+                throw new ProtoSerializationException("数组编码尺寸溢出。", exception);
             }
 
             return size;
-        }
-
-        private static void EnsureLength(int length, int maximum, string name)
-        {
-            if (length < 0 || length > maximum)
-            {
-                throw new ProtoSerializationException($"{name}长度超出限制：{length}，最大={maximum}。");
-            }
         }
     }
 }
