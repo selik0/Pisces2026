@@ -78,11 +78,7 @@ internal static class ExcelConfigReader
             return null;
         }
 
-        string[] keyNames = Text(sheet.Cells[1, 3].Value).Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (keyNames.Length != 1 || !Identifier.IsMatch(keyNames[0]))
-        {
-            throw Error(path, sheet.Name, 1, 3, "配置表必须声明一个 uint 主键字段");
-        }
+        string keyDeclaration = Text(sheet.Cells[1, 3].Value);
 
         int firstColumn = IsFieldDeclaration(sheet, 1) ? 1 : 2;
         List<PhysicalColumn> columns = new();
@@ -137,6 +133,7 @@ internal static class ExcelConfigReader
             throw Error(path, sheet.Name, 3, firstColumn, "没有找到可导出的字段");
         }
 
+        string keyFieldName = ResolveKeyFieldName(path, sheet.Name, keyDeclaration, columns);
         ValidateDuplicateColumns(path, sheet.Name, columns);
         List<PhysicalRow> rows = new();
         for (int row = dataStartRow; row <= sheet.Dimension.End.Row; row++)
@@ -155,7 +152,7 @@ internal static class ExcelConfigReader
             SourcePath = path,
             SheetName = sheet.Name,
             ClassName = className,
-            KeyFieldName = keyNames[0],
+            KeyFieldName = keyFieldName,
             Columns = columns,
             Rows = rows
         };
@@ -361,6 +358,35 @@ internal static class ExcelConfigReader
         if (text.Equals("Client", StringComparison.OrdinalIgnoreCase)) return ExportTarget.Client;
         if (text.Equals("Server", StringComparison.OrdinalIgnoreCase)) return ExportTarget.Server;
         throw new InvalidDataException($"导出范围必须是 All、Client 或 Server：{text}");
+    }
+
+    private static string ResolveKeyFieldName(string path, string sheet, string declaration, List<PhysicalColumn> columns)
+    {
+        string[] keyNames = declaration.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (keyNames.Length != 1 || !Identifier.IsMatch(keyNames[0]))
+        {
+            string actual = declaration.Length == 0 ? "<空>" : declaration;
+            throw new InvalidDataException($"{path}，Sheet={sheet}，行=1，列=3：必须声明一个合法的主键字段名（实际={actual}）");
+        }
+
+        PhysicalColumn[] keyFields = columns.Where(column => column.Name == keyNames[0]).ToArray();
+        if (keyFields.Length == 0)
+        {
+            throw new InvalidDataException($"{path}，Sheet={sheet}，行=1，列=3：主键字段 {keyNames[0]} 不存在于第3行字段定义中");
+        }
+
+        if (keyFields.Length > 1)
+        {
+            throw new InvalidDataException($"{path}，Sheet={sheet}，行=1，列=3：主键字段 {keyNames[0]} 在第3行存在多个定义");
+        }
+
+        PhysicalColumn keyField = keyFields[0];
+        if (keyField.Type.Name != "uint")
+        {
+            throw new InvalidDataException($"{path}，Sheet={sheet}，行=4，列={keyField.Column}：主键字段 {keyField.Name} 必须是 uint，实际是 {keyField.Type.Name}");
+        }
+
+        return keyField.Name;
     }
 
     private static void ValidateDuplicateColumns(string path, string sheet, List<PhysicalColumn> columns)

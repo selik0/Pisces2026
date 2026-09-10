@@ -1,5 +1,5 @@
 {
-  "excelRoot": "Excel",
+  "excelRoot": "Excel/xls",
   "includedFolders": [
     "通用"
   ],
