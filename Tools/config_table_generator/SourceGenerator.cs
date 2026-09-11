@@ -15,8 +15,14 @@ internal static class SourceGenerator
         code.AppendLine("    [StructLayout(LayoutKind.Sequential)]");
         code.AppendLine($"    public sealed class {model.ClassName} : ConfigRecord").AppendLine("    {");
         foreach (LogicalField field in OrderForMemoryLayout(model.Fields, field => field.Type)) code.AppendLine($"        public {CSharpType(field.Type)} {field.Name} {{ get; private set; }}");
-        code.AppendLine().AppendLine($"        public const uint CurrentFormatVersion = {model.FormatVersion};");
+        code.AppendLine().AppendLine("        public const uint Magic = 0x47464347;");
+        code.AppendLine($"        public const uint CurrentFormatVersion = {model.FormatVersion};");
         code.AppendLine($"        public const ulong SchemaHash = 0x{SchemaHashValue(model):X16}UL;");
+        code.AppendLine().AppendLine("        public static bool ValidateHeader(ConfigFileHeader header)").AppendLine("        {");
+        code.AppendLine("            if (header.Magic != Magic)").AppendLine("            {").AppendLine("                ConfigLog.Error($\"配置文件 Magic 错误：0x{header.Magic:X8}。\");").AppendLine("                return false;").AppendLine("            }");
+        code.AppendLine().AppendLine("            if (header.FormatVersion != CurrentFormatVersion)").AppendLine("            {").AppendLine("                ConfigLog.Error($\"不支持的配置格式版本：{header.FormatVersion}。\");").AppendLine("                return false;").AppendLine("            }");
+        code.AppendLine().AppendLine("            if (header.SchemaHash != SchemaHash)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置 Schema Hash 不匹配。\");").AppendLine("                return false;").AppendLine("            }");
+        code.AppendLine().AppendLine("            return true;").AppendLine("        }");
         code.AppendLine().AppendLine("        public override void Decode(ref ProtoReader reader)").AppendLine("        {");
         foreach (LogicalField field in model.Fields) AppendCSharpRead(code, field);
         code.AppendLine("        }").AppendLine("    }").AppendLine("}");
@@ -39,8 +45,8 @@ internal static class SourceGenerator
         code.AppendLine($"        private {model.ClassName}Table()").AppendLine("            : base()").AppendLine("        {").AppendLine("        }");
         code.AppendLine().AppendLine($"        public static {model.ClassName}Table Load(byte[] data)").AppendLine("        {");
         code.AppendLine("            if (data == null)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"加载配置失败：data 不能为 null。\");").AppendLine("                return null;").AppendLine("            }");
-        code.AppendLine().AppendLine("            var reader = new ProtoReader(data);").AppendLine($"            ConfigFileHeader header = ConfigFileHeader.Decode(ref reader, {model.ClassName}.CurrentFormatVersion);");
-        code.AppendLine($"            if (header.SchemaHash != {model.ClassName}.SchemaHash)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置 Schema Hash 不匹配。\");").AppendLine("                return null;").AppendLine("            }");
+        code.AppendLine().AppendLine("            var reader = new ProtoReader(data);").AppendLine("            ConfigFileHeader header = ConfigFileHeader.Decode(ref reader);");
+        code.AppendLine($"            if (!{model.ClassName}.ValidateHeader(header))").AppendLine("            {").AppendLine("                return null;").AppendLine("            }");
         code.AppendLine().AppendLine("            if (header.RecordCount > int.MaxValue)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置记录数超出 int 范围。\");").AppendLine("                return null;").AppendLine("            }");
         code.AppendLine().AppendLine($"            var table = new {model.ClassName}Table();").AppendLine("            for (int i = 0; i < (int)header.RecordCount; i++)").AppendLine("            {");
         code.AppendLine("                if (reader.Remaining < sizeof(int))").AppendLine("                {").AppendLine("                    ConfigLog.Error(\"配置记录缺少长度字段。\");").AppendLine("                    return null;").AppendLine("                }");

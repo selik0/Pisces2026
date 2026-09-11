@@ -1,5 +1,3 @@
-using System;
-
 namespace GameProto
 {
     /// <summary>
@@ -8,9 +6,8 @@ namespace GameProto
     public struct ConfigFileHeader
     {
         public const int HeaderSize = 20;
-        public const uint Magic = 0x47464347;
-        public const uint CurrentFormatVersion = 1;
 
+        public uint Magic;
         public uint FormatVersion;
         public ulong SchemaHash;
         public uint RecordCount;
@@ -25,23 +22,10 @@ namespace GameProto
 
         public static ConfigFileHeader Decode(ref ProtoReader reader)
         {
-            uint magic = reader.ReadUInt32();
-            if (magic != Magic)
-            {
-                ConfigLog.Error($"配置文件 Magic 错误：0x{magic:X8}。");
-                return default(ConfigFileHeader);
-            }
-
-            uint formatVersion = reader.ReadUInt32();
-            if (formatVersion != CurrentFormatVersion)
-            {
-                ConfigLog.Error($"不支持的配置格式版本：{formatVersion}。");
-                return default(ConfigFileHeader);
-            }
-
             return new ConfigFileHeader
             {
-                FormatVersion = formatVersion,
+                Magic = reader.ReadUInt32(),
+                FormatVersion = reader.ReadUInt32(),
                 SchemaHash = reader.ReadUInt64(),
                 RecordCount = reader.ReadUInt32()
             };

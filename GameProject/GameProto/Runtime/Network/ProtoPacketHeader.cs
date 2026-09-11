@@ -6,7 +6,6 @@ namespace GameProto
     public struct ProtoPacketHeader
     {
         public const int HeaderSize = 16;
-        public const uint CurrentProtocolVersion = 1;
         public uint PayloadLength;
         public uint MessageId;
         public uint ProtocolVersion;
@@ -22,21 +21,13 @@ namespace GameProto
 
         public static ProtoPacketHeader Decode(ref ProtoReader reader)
         {
-            ProtoPacketHeader header = new ProtoPacketHeader
+            return new ProtoPacketHeader
             {
                 PayloadLength = reader.ReadUInt32(),
                 MessageId = reader.ReadUInt32(),
                 ProtocolVersion = reader.ReadUInt32(),
                 Sequence = reader.ReadUInt32()
             };
-
-            if (header.ProtocolVersion != CurrentProtocolVersion)
-            {
-                ConfigLog.Error($"不支持的协议版本：{header.ProtocolVersion}。");
-                return default(ProtoPacketHeader);
-            }
-
-            return header;
         }
     }
 }
