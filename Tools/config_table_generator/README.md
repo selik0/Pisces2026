@@ -33,11 +33,11 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-输出位置：
+输出位置。Windows 和 Linux 文件直接放在同一个目录，不再按平台创建子目录：
 
 ```text
-publish/win-x64/ConfigTableGenerator.exe
-publish/linux-x64/ConfigTableGenerator
+Excel/tools/ConfigTableGenerator.exe
+Excel/tools/ConfigTableGenerator
 ```
 
 Windows：
@@ -110,10 +110,14 @@ uint int bool string float long double
 ## 输出
 
 - 客户端配置记录：C# `ConfigRecord` 派生类及 `Decode`
-- 客户端配置表：C# `ConfigTable<T>` 派生类及 `Load`
+- 客户端配置表：C# `ConfigTable<uint, T>` 派生类及 `Load`
 - 服务器配置记录：Go struct 及 `DecodeXxx`
 - 客户端配置数据：与 GameProto Reader 对应的 `GCFG` 小端序二进制
 - 服务器配置数据：与 Go Reader 对应的相同线格式二进制
+
+生成代码直接写入配置项指定的 `Generated` 目录，不会根据 Excel 所在目录创建子目录；代码 namespace 固定使用 `GameProto` 和 `GameLogic`。配置记录属性使用 `{ get; private set; }`，并通过重写 `ConfigRecord.Decode` 填充。
+
+生成的 C# 配置加载代码遇到 null 数据、Schema Hash 不匹配或记录数超出 int 范围时，通过 `ConfigLog.Error` 记录错误并返回 null，不抛出异常。
 
 Go 代码假定服务器包中提供与 GameProto 线格式一致的 `Reader`，包括 `ReadUInt32`、`ReadString`、`ReadBytes` 和其他生成代码调用的方法。
 

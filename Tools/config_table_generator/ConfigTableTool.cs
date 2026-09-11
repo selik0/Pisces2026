@@ -64,7 +64,7 @@ public static class ConfigTableTool
                 ValidateVariantSchemas(excelPath, sheet, canonical, targetOutputs);
                 if (generateCode)
                 {
-                    GenerateTargetCode(projectRoot, relativeDirectory, settings, canonical);
+                    GenerateTargetCode(projectRoot, settings, canonical);
                 }
                 if (exportData)
                 {
@@ -83,16 +83,16 @@ public static class ConfigTableTool
         }
     }
 
-    private static void GenerateTargetCode(string projectRoot, string relativeDirectory, GeneratorSettings settings, ConfigOutputModel model)
+    private static void GenerateTargetCode(string projectRoot, GeneratorSettings settings, ConfigOutputModel model)
     {
         if (model.Target == ExportTarget.Client)
         {
-            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ClientCodeDirectory), relativeDirectory, model.ClassName + ".g.cs"), SourceGenerator.GenerateClientRecord(model, settings.ClientNamespace));
-            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ClientTableDirectory), relativeDirectory, model.ClassName + "Table.g.cs"), SourceGenerator.GenerateClientTable(model, settings.ClientTableNamespace, settings.ClientNamespace));
+            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ClientCodeDirectory), model.ClassName + ".g.cs"), SourceGenerator.GenerateClientRecord(model, settings.ClientNamespace));
+            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ClientTableDirectory), model.ClassName + "Table.g.cs"), SourceGenerator.GenerateClientTable(model, settings.ClientTableNamespace, settings.ClientNamespace));
         }
         else
         {
-            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ServerCodeDirectory), relativeDirectory, Snake(model.ClassName) + ".gen.go"), SourceGenerator.GenerateGo(model, settings.ServerPackage));
+            WriteTextIfChanged(Path.Combine(Resolve(projectRoot, settings.ServerCodeDirectory), Snake(model.ClassName) + ".gen.go"), SourceGenerator.GenerateGo(model, settings.ServerPackage));
         }
 
         Console.WriteLine($"Generated code: {model.Target} {model.ClassName} [{model.SheetName}]");

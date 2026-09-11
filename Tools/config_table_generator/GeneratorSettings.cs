@@ -12,8 +12,8 @@ internal sealed class GeneratorSettings
     public string ServerCodeDirectory { get; set; } = "Server/Config/Generated";
     public string ClientDataDirectory { get; set; } = "GameClient/Assets/GameAssets/Configs";
     public string ServerDataDirectory { get; set; } = "Server/Config/Data";
-    public string ClientNamespace { get; set; } = "GameProto.Config.Generated";
-    public string ClientTableNamespace { get; set; } = "GameLogic.Config.Generated";
+    public string ClientNamespace { get; set; } = "GameProto";
+    public string ClientTableNamespace { get; set; } = "GameLogic";
     public string ServerPackage { get; set; } = "config";
     public int DataStartRow { get; set; } = 7;
 

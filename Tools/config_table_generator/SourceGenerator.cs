@@ -7,39 +7,36 @@ internal static class SourceGenerator
 {
     public static string GenerateClientRecord(ConfigOutputModel model, string rootNamespace)
     {
-        string namespaceName = $"{rootNamespace}.{Sanitize(model.SheetName)}";
+        string namespaceName = rootNamespace;
         StringBuilder code = Header();
         code.AppendLine("using System.Collections.Generic;").AppendLine("using GameProto;").AppendLine();
         code.AppendLine($"namespace {namespaceName}").AppendLine("{");
         AppendCSharpCustomTypes(code, model.Fields);
         code.AppendLine($"    public sealed class {model.ClassName} : ConfigRecord").AppendLine("    {");
-        foreach (LogicalField field in model.Fields) code.AppendLine($"        public {CSharpType(field.Type)} {field.Name} {{ get; }}");
+        foreach (LogicalField field in model.Fields) code.AppendLine($"        public {CSharpType(field.Type)} {field.Name} {{ get; private set; }}");
         code.AppendLine().AppendLine($"        public const ulong SchemaHash = 0x{SchemaHashValue(model):X16}UL;");
-        code.AppendLine().AppendLine($"        public {model.ClassName}({string.Join(", ", model.Fields.Select(field => $"{CSharpType(field.Type)} {Camel(field.Name)}"))})").AppendLine("        {");
-        foreach (LogicalField field in model.Fields) code.AppendLine($"            {field.Name} = {Camel(field.Name)};");
-        code.AppendLine("        }").AppendLine().AppendLine($"        public static {model.ClassName} Decode(ref ProtoReader reader)").AppendLine("        {");
+        code.AppendLine().AppendLine("        public override void Decode(ref ProtoReader reader)").AppendLine("        {");
         foreach (LogicalField field in model.Fields) AppendCSharpRead(code, field);
-        code.AppendLine($"            return new {model.ClassName}({string.Join(", ", model.Fields.Select(field => Camel(field.Name)))});");
         code.AppendLine("        }").AppendLine("    }").AppendLine("}");
         return code.ToString();
     }
 
     public static string GenerateClientTable(ConfigOutputModel model, string rootNamespace, string recordNamespace)
     {
-        string namespaceName = $"{rootNamespace}.{Sanitize(model.SheetName)}";
-        string configNamespace = $"{recordNamespace}.{Sanitize(model.SheetName)}";
+        string namespaceName = rootNamespace;
+        string configNamespace = recordNamespace;
         StringBuilder code = Header();
         code.AppendLine("using System;").AppendLine("using GameProto;").AppendLine($"using {configNamespace};").AppendLine();
         code.AppendLine($"namespace {namespaceName}").AppendLine("{");
-        code.AppendLine($"    public sealed class {model.ClassName}Table : ConfigTable<{model.ClassName}>").AppendLine("    {");
-        code.AppendLine($"        private {model.ClassName}Table(int capacity)").AppendLine("            : base(capacity)").AppendLine("        {").AppendLine("        }");
+        code.AppendLine($"    public sealed class {model.ClassName}Table : ConfigTable<uint, {model.ClassName}>").AppendLine("    {");
+        code.AppendLine($"        private {model.ClassName}Table()").AppendLine("            : base()").AppendLine("        {").AppendLine("        }");
         code.AppendLine().AppendLine($"        public static {model.ClassName}Table Load(byte[] data)").AppendLine("        {");
-        code.AppendLine("            if (data == null)").AppendLine("            {").AppendLine("                throw new ArgumentNullException(nameof(data));").AppendLine("            }");
+        code.AppendLine("            if (data == null)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"加载配置失败：data 不能为 null。\");").AppendLine("                return null;").AppendLine("            }");
         code.AppendLine().AppendLine("            var reader = new ProtoReader(data);").AppendLine("            ConfigFileHeader header = ConfigFileHeader.Decode(ref reader);");
-        code.AppendLine($"            if (header.SchemaHash != {model.ClassName}.SchemaHash)").AppendLine("            {").AppendLine("                throw new ConfigSerializationException(\"配置 Schema Hash 不匹配。\");").AppendLine("            }");
-        code.AppendLine().AppendLine("            if (header.RecordCount > int.MaxValue)").AppendLine("            {").AppendLine("                throw new ConfigSerializationException(\"配置记录数超出 int 范围。\");").AppendLine("            }");
-        code.AppendLine().AppendLine($"            var table = new {model.ClassName}Table((int)header.RecordCount);").AppendLine("            for (int i = 0; i < (int)header.RecordCount; i++)").AppendLine("            {");
-        code.AppendLine($"                {model.ClassName} item = {model.ClassName}.Decode(ref reader);").AppendLine($"                table.Add(item.{model.KeyFieldName}, item);").AppendLine("            }");
+        code.AppendLine($"            if (header.SchemaHash != {model.ClassName}.SchemaHash)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置 Schema Hash 不匹配。\");").AppendLine("                return null;").AppendLine("            }");
+        code.AppendLine().AppendLine("            if (header.RecordCount > int.MaxValue)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置记录数超出 int 范围。\");").AppendLine("                return null;").AppendLine("            }");
+        code.AppendLine().AppendLine($"            var table = new {model.ClassName}Table();").AppendLine("            for (int i = 0; i < (int)header.RecordCount; i++)").AppendLine("            {");
+        code.AppendLine($"                var item = new {model.ClassName}();").AppendLine("                item.Decode(ref reader);").AppendLine($"                table.Add(item.{model.KeyFieldName}, item);").AppendLine("            }");
         code.AppendLine().AppendLine("            reader.EnsureFullyConsumed();").AppendLine("            return table;").AppendLine("        }").AppendLine("    }").AppendLine("}");
         return code.ToString();
     }
@@ -81,21 +78,22 @@ internal static class SourceGenerator
         string variable = Camel(field.Name);
         if (field.Type.Kind == ConfigTypeKind.Scalar)
         {
-            code.AppendLine($"            {CSharpType(field.Type)} {variable} = reader.{CSharpReader(field.Type)}();");
+            code.AppendLine($"            {field.Name} = reader.{CSharpReader(field.Type)}();");
         }
         else if (field.Type.Kind is ConfigTypeKind.Array or ConfigTypeKind.List)
         {
             code.AppendLine($"            int {variable}Count = reader.ReadCollectionCount();");
             string allocation = field.Type.Kind == ConfigTypeKind.Array ? $"new {CSharpType(field.Type.ElementType!)}[{variable}Count]" : $"new List<{CSharpType(field.Type.ElementType!)}>({variable}Count)";
-            code.AppendLine($"            {CSharpType(field.Type)} {variable} = {allocation};").AppendLine($"            for (int i = 0; i < {variable}Count; i++)").AppendLine("            {");
+            string valueVariable = variable + "Value";
+            code.AppendLine($"            {CSharpType(field.Type)} {valueVariable} = {allocation};").AppendLine($"            for (int i = 0; i < {variable}Count; i++)").AppendLine("            {");
             string read = $"reader.{CSharpReader(field.Type.ElementType!)}()";
-            code.AppendLine(field.Type.Kind == ConfigTypeKind.Array ? $"                {variable}[i] = {read};" : $"                {variable}.Add({read});");
-            code.AppendLine("            }");
+            code.AppendLine(field.Type.Kind == ConfigTypeKind.Array ? $"                {valueVariable}[i] = {read};" : $"                {valueVariable}.Add({read});");
+            code.AppendLine("            }").AppendLine($"            {field.Name} = {valueVariable};");
         }
         else
         {
             foreach (ConfigMember member in field.Type.Members) code.AppendLine($"            {CSharpType(member.Type)} {variable}{member.Name} = reader.{CSharpReader(member.Type)}();");
-            code.AppendLine($"            {field.Type.Name} {variable} = new {field.Type.Name}({string.Join(", ", field.Type.Members.Select(member => variable + member.Name))});");
+            code.AppendLine($"            {field.Name} = new {field.Type.Name}({string.Join(", ", field.Type.Members.Select(member => variable + member.Name))});");
         }
     }
 
