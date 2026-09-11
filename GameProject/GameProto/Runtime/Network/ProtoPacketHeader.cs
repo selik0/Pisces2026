@@ -32,7 +32,8 @@ namespace GameProto
 
             if (header.ProtocolVersion != CurrentProtocolVersion)
             {
-                throw new ProtoSerializationException($"不支持的协议版本：{header.ProtocolVersion}。");
+                ConfigLog.Error($"不支持的协议版本：{header.ProtocolVersion}。");
+                return default(ProtoPacketHeader);
             }
 
             return header;

@@ -28,13 +28,15 @@ namespace GameProto
             uint magic = reader.ReadUInt32();
             if (magic != Magic)
             {
-                throw new ConfigSerializationException($"配置文件 Magic 错误：0x{magic:X8}。");
+                ConfigLog.Error($"配置文件 Magic 错误：0x{magic:X8}。");
+                return default(ConfigFileHeader);
             }
 
             uint formatVersion = reader.ReadUInt32();
             if (formatVersion != CurrentFormatVersion)
             {
-                throw new ConfigSerializationException($"不支持的配置格式版本：{formatVersion}。");
+                ConfigLog.Error($"不支持的配置格式版本：{formatVersion}。");
+                return default(ConfigFileHeader);
             }
 
             return new ConfigFileHeader

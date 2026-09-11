@@ -1,11 +1,11 @@
 using System;
 
-namespace GameNative
+namespace GameProto
 {
     /// <summary>
-    /// GameNative 日志入口。未注入宿主日志服务时静默忽略，避免底层能力依赖具体日志实现。
+    /// GameProto 配置日志入口。未注入宿主日志服务时静默忽略，避免协议层依赖具体日志实现。
     /// </summary>
-    public static class NativeLog
+    public static class ConfigLog
     {
         private static ILogService _service;
 
@@ -15,7 +15,7 @@ namespace GameNative
         {
             if (service == null)
             {
-                throw new ArgumentNullException(nameof(service), "Log service implementation cannot be null.");
+                return;
             }
 
             _service = service;

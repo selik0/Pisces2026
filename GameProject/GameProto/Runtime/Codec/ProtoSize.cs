@@ -28,11 +28,13 @@ namespace GameProto
             }
             catch (System.Text.EncoderFallbackException exception)
             {
-                throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+                ConfigLog.Error("字符串包含非法 UTF-16。", exception);
+                return 0;
             }
             catch (OverflowException exception)
             {
-                throw new ProtoSerializationException("字符串编码尺寸溢出。", exception);
+                ConfigLog.Error("字符串编码尺寸溢出。", exception);
+                return 0;
             }
         }
 
@@ -46,7 +48,8 @@ namespace GameProto
         {
             if (elementSize == null)
             {
-                throw new ArgumentNullException(nameof(elementSize));
+                ConfigLog.Error("数组尺寸计算失败：elementSize 不能为 null。");
+                return 0;
             }
 
             int count = value == null ? 0 : value.Length;
@@ -58,7 +61,8 @@ namespace GameProto
                     int currentElementSize = elementSize(value[i]);
                     if (currentElementSize < 0)
                     {
-                        throw new ProtoSerializationException($"数组元素编码尺寸不能为负数：索引={i}，尺寸={currentElementSize}。");
+                        ConfigLog.Error($"数组元素编码尺寸不能为负数：索引={i}，尺寸={currentElementSize}。");
+                        return 0;
                     }
 
                     size = checked(size + currentElementSize);
@@ -66,7 +70,8 @@ namespace GameProto
             }
             catch (OverflowException exception)
             {
-                throw new ProtoSerializationException("数组编码尺寸溢出。", exception);
+                ConfigLog.Error("数组编码尺寸溢出。", exception);
+                return 0;
             }
 
             return size;

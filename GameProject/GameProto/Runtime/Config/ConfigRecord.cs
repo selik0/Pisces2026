@@ -5,8 +5,6 @@ namespace GameProto
     /// </summary>
     public abstract class ConfigRecord
     {
-        public abstract int GetEncodedSize();
-        public abstract void Encode(ref ProtoWriter writer);
         public abstract void Decode(ref ProtoReader reader);
     }
 }

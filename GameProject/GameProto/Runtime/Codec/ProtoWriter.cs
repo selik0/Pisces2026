@@ -14,7 +14,8 @@ namespace GameProto
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException(nameof(buffer));
+                ConfigLog.Error("ProtoWriter 创建失败：buffer 不能为 null。");
+                buffer = Array.Empty<byte>();
             }
 
             _buffer = buffer;
@@ -26,19 +27,31 @@ namespace GameProto
         public int Remaining => _buffer.Length - _offset;
 
         public void WriteBoolean(bool value) => WriteByte(value ? (byte)1 : (byte)0);
-        public void WriteByte(byte value) { EnsureCapacity(1); _buffer[_offset++] = value; }
+        public void WriteByte(byte value)
+        {
+            if (EnsureCapacity(1))
+            {
+                _buffer[_offset++] = value;
+            }
+        }
         public void WriteSByte(sbyte value) => WriteByte(unchecked((byte)value));
         public void WriteInt16(short value) => WriteUInt16(unchecked((ushort)value));
         public void WriteUInt16(ushort value)
         {
-            EnsureCapacity(2);
+            if (!EnsureCapacity(2))
+            {
+                return;
+            }
             _buffer[_offset++] = (byte)value;
             _buffer[_offset++] = (byte)(value >> 8);
         }
         public void WriteInt32(int value) => WriteUInt32(unchecked((uint)value));
         public void WriteUInt32(uint value)
         {
-            EnsureCapacity(4);
+            if (!EnsureCapacity(4))
+            {
+                return;
+            }
             _buffer[_offset++] = (byte)value;
             _buffer[_offset++] = (byte)(value >> 8);
             _buffer[_offset++] = (byte)(value >> 16);
@@ -47,7 +60,10 @@ namespace GameProto
         public void WriteInt64(long value) => WriteUInt64(unchecked((ulong)value));
         public void WriteUInt64(ulong value)
         {
-            EnsureCapacity(8);
+            if (!EnsureCapacity(8))
+            {
+                return;
+            }
             for (int i = 0; i < 8; i++)
             {
                 _buffer[_offset++] = (byte)(value >> (i * 8));
@@ -66,11 +82,16 @@ namespace GameProto
             }
             catch (System.Text.EncoderFallbackException exception)
             {
-                throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+                ConfigLog.Error("字符串包含非法 UTF-16。", exception);
+                return;
+            }
+
+            if (!EnsureCapacity(4 + byteCount))
+            {
+                return;
             }
 
             WriteUInt32((uint)byteCount);
-            EnsureCapacity(byteCount);
             if (byteCount > 0)
             {
                 try
@@ -79,7 +100,8 @@ namespace GameProto
                 }
                 catch (System.Text.EncoderFallbackException exception)
                 {
-                    throw new ProtoSerializationException("字符串包含非法 UTF-16。", exception);
+                    ConfigLog.Error("字符串包含非法 UTF-16。", exception);
+                    return;
                 }
             }
             _offset += byteCount;
@@ -88,8 +110,12 @@ namespace GameProto
         public void WriteBytes(byte[] value)
         {
             int length = value == null ? 0 : value.Length;
+            if (!EnsureCapacity(4 + length))
+            {
+                return;
+            }
+
             WriteUInt32((uint)length);
-            EnsureCapacity(length);
             if (length > 0)
             {
                 Buffer.BlockCopy(value, 0, _buffer, _offset, length);
@@ -104,12 +130,15 @@ namespace GameProto
             return result;
         }
 
-        private void EnsureCapacity(int count)
+        private bool EnsureCapacity(int count)
         {
             if (count < 0 || count > Remaining)
             {
-                throw new ProtoSerializationException($"写入空间不足：位置={Position}，需要={count}，剩余={Remaining}。");
+                ConfigLog.Error($"写入空间不足：位置={Position}，需要={count}，剩余={Remaining}。");
+                return false;
             }
+
+            return true;
         }
     }
 }

@@ -7,19 +7,15 @@ namespace GameProto
     /// 配置表基类，统一使用 uint 主键管理配置记录及查询。
     /// </summary>
     /// <typeparam name="TConfig">配置记录类型。</typeparam>
-    public abstract class ConfigTable<TConfig>
+    public abstract class ConfigTable<TKey, TConfig>
+        where TKey : struct, IEquatable<TKey>
         where TConfig : ConfigRecord
     {
-        private readonly Dictionary<uint, TConfig> _items;
+        private readonly Dictionary<TKey, TConfig> _items;
 
-        protected ConfigTable(int capacity)
+        protected ConfigTable()
         {
-            if (capacity < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(capacity));
-            }
-
-            _items = new Dictionary<uint, TConfig>(capacity);
+            _items = new Dictionary<TKey, TConfig>();
         }
 
         /// <summary>
@@ -30,19 +26,20 @@ namespace GameProto
         /// <summary>
         /// 尝试按主键获取配置记录。
         /// </summary>
-        public bool TryGet(uint key, out TConfig config)
+        public bool TryGet(TKey key, out TConfig config)
         {
             return _items.TryGetValue(key, out config);
         }
 
         /// <summary>
-        /// 按主键获取配置记录，不存在时抛出异常。
+        /// 按主键获取配置记录，不存在时记录错误并返回 null。
         /// </summary>
-        public TConfig Get(uint key)
+        public TConfig Get(TKey key)
         {
             if (!_items.TryGetValue(key, out TConfig config))
             {
-                throw new KeyNotFoundException($"找不到主键为 {key} 的配置。");
+                ConfigLog.Error($"找不到主键为 {key} 的配置。");
+                return null;
             }
 
             return config;
@@ -51,16 +48,18 @@ namespace GameProto
         /// <summary>
         /// 添加配置记录，重复主键将被拒绝。
         /// </summary>
-        protected void Add(uint key, TConfig config)
+        protected void Add(TKey key, TConfig config)
         {
             if (config == null)
             {
-                throw new ArgumentNullException(nameof(config));
+                ConfigLog.Error("添加配置记录失败：config 不能为 null。");
+                return;
             }
 
             if (_items.ContainsKey(key))
             {
-                throw new ConfigSerializationException($"配置主键重复：{key}。");
+                ConfigLog.Error($"配置主键重复：{key}。");
+                return;
             }
 
             _items.Add(key, config);

@@ -21,12 +21,17 @@ namespace GameProto
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException(nameof(buffer));
+                ConfigLog.Error("ProtoReader 创建失败：buffer 不能为 null。");
+                buffer = Array.Empty<byte>();
+                offset = 0;
+                length = 0;
             }
 
             if (offset < 0 || length < 0 || offset > buffer.Length - length)
             {
-                throw new ArgumentOutOfRangeException(nameof(offset), "读取范围无效。");
+                ConfigLog.Error($"ProtoReader 创建失败：读取范围无效，offset={offset}，length={length}，capacity={buffer.Length}。");
+                offset = 0;
+                length = 0;
             }
 
             _buffer = buffer;
@@ -41,19 +46,25 @@ namespace GameProto
 
         public void EnsureRemaining(int count)
         {
+            TryEnsureRemaining(count);
+        }
+
+        private bool TryEnsureRemaining(int count)
+        {
             if (count < 0 || count > Remaining)
             {
-                throw new ProtoSerializationException(
-                    $"读取越界：位置={Position}，需要={count}，剩余={Remaining}。");
+                ConfigLog.Error($"读取越界：位置={Position}，需要={count}，剩余={Remaining}。");
+                return false;
             }
+
+            return true;
         }
 
         public void EnsureFullyConsumed()
         {
             if (!IsAtEnd)
             {
-                throw new ProtoSerializationException(
-                    $"数据未完全读取：位置={Position}，剩余={Remaining}。");
+                ConfigLog.Error($"数据未完全读取：位置={Position}，剩余={Remaining}。");
             }
         }
 
@@ -70,12 +81,16 @@ namespace GameProto
                 return true;
             }
 
-            throw new ProtoSerializationException($"非法 bool 值：{value}，位置={Position - 1}。");
+            ConfigLog.Error($"非法 bool 值：{value}，位置={Position - 1}。");
+            return false;
         }
 
         public byte ReadByte()
         {
-            EnsureRemaining(1);
+            if (!TryEnsureRemaining(1))
+            {
+                return 0;
+            }
             return _buffer[_offset++];
         }
 
@@ -85,7 +100,10 @@ namespace GameProto
 
         public ushort ReadUInt16()
         {
-            EnsureRemaining(2);
+            if (!TryEnsureRemaining(2))
+            {
+                return 0;
+            }
             ushort value = (ushort)(_buffer[_offset] | (_buffer[_offset + 1] << 8));
             _offset += 2;
             return value;
@@ -95,7 +113,10 @@ namespace GameProto
 
         public uint ReadUInt32()
         {
-            EnsureRemaining(4);
+            if (!TryEnsureRemaining(4))
+            {
+                return 0;
+            }
             uint value = (uint)(_buffer[_offset]
                 | (_buffer[_offset + 1] << 8)
                 | (_buffer[_offset + 2] << 16)
@@ -108,7 +129,10 @@ namespace GameProto
 
         public ulong ReadUInt64()
         {
-            EnsureRemaining(8);
+            if (!TryEnsureRemaining(8))
+            {
+                return 0;
+            }
             ulong value = (ulong)_buffer[_offset]
                 | ((ulong)_buffer[_offset + 1] << 8)
                 | ((ulong)_buffer[_offset + 2] << 16)
@@ -135,7 +159,10 @@ namespace GameProto
         {
             uint byteLength = ReadUInt32();
             int length = GetSafeLength(byteLength, "字符串");
-            EnsureRemaining(length);
+            if (!TryEnsureRemaining(length))
+            {
+                return string.Empty;
+            }
             string value;
             try
             {
@@ -143,7 +170,8 @@ namespace GameProto
             }
             catch (System.Text.DecoderFallbackException exception)
             {
-                throw new ProtoSerializationException($"字符串包含非法 UTF-8：位置={Position}，长度={length}。", exception);
+                ConfigLog.Error($"字符串包含非法 UTF-8：位置={Position}，长度={length}。", exception);
+                return string.Empty;
             }
             _offset += length;
             return value;
@@ -153,7 +181,10 @@ namespace GameProto
         {
             uint byteLength = ReadUInt32();
             int length = GetSafeLength(byteLength, "bytes");
-            EnsureRemaining(length);
+            if (!TryEnsureRemaining(length))
+            {
+                return Array.Empty<byte>();
+            }
             byte[] value = new byte[length];
             if (length > 0)
             {
@@ -173,7 +204,8 @@ namespace GameProto
         {
             if (value > int.MaxValue)
             {
-                throw new ProtoSerializationException($"{name}长度超出 int 范围：{value}。");
+                ConfigLog.Error($"{name}长度超出 int 范围：{value}。");
+                return 0;
             }
 
             return (int)value;

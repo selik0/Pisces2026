@@ -3,7 +3,7 @@ namespace GameNative
     /// <summary>
     /// 平台判断抽象（控制反转）。
     /// 框架层只依赖本接口判断运行平台，不感知具体宏和引擎 API；
-    /// 宿主工程提供实现并通过 <see cref="ServiceBase{T}.SetService"/> 注入。
+    /// 宿主工程提供实现并通过 <see cref="Platform.SetService"/> 注入。
     /// </summary>
     public interface IPlatform
     {
