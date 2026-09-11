@@ -200,6 +200,21 @@ namespace GameProto
             return GetSafeLength(ReadUInt32(), "集合");
         }
 
+        /// <summary>
+        /// 创建限定长度的子读取器，并将当前读取位置移动到该段数据之后。
+        /// </summary>
+        public ProtoReader ReadSubReader(int length)
+        {
+            if (!TryEnsureRemaining(length))
+            {
+                return new ProtoReader(Array.Empty<byte>());
+            }
+
+            ProtoReader reader = new ProtoReader(_buffer, _offset, length);
+            _offset += length;
+            return reader;
+        }
+
         private static int GetSafeLength(uint value, string name)
         {
             if (value > int.MaxValue)

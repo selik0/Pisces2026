@@ -107,6 +107,7 @@ internal sealed class ConfigOutputModel
     public required string KeyFieldName { get; init; }
     public required ExportTarget Target { get; init; }
     public required string? FileSuffix { get; init; }
+    public required uint FormatVersion { get; init; }
     public required IReadOnlyList<LogicalField> Fields { get; init; }
     public required IReadOnlyList<LogicalRow> Rows { get; init; }
 }

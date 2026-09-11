@@ -9,12 +9,14 @@ internal static class SourceGenerator
     {
         string namespaceName = rootNamespace;
         StringBuilder code = Header();
-        code.AppendLine("using System.Collections.Generic;").AppendLine("using GameProto;").AppendLine();
+        code.AppendLine("using System.Collections.Generic;").AppendLine("using System.Runtime.InteropServices;").AppendLine("using GameProto;").AppendLine();
         code.AppendLine($"namespace {namespaceName}").AppendLine("{");
         AppendCSharpCustomTypes(code, model.Fields);
+        code.AppendLine("    [StructLayout(LayoutKind.Sequential)]");
         code.AppendLine($"    public sealed class {model.ClassName} : ConfigRecord").AppendLine("    {");
-        foreach (LogicalField field in model.Fields) code.AppendLine($"        public {CSharpType(field.Type)} {field.Name} {{ get; private set; }}");
-        code.AppendLine().AppendLine($"        public const ulong SchemaHash = 0x{SchemaHashValue(model):X16}UL;");
+        foreach (LogicalField field in OrderForMemoryLayout(model.Fields, field => field.Type)) code.AppendLine($"        public {CSharpType(field.Type)} {field.Name} {{ get; private set; }}");
+        code.AppendLine().AppendLine($"        public const uint CurrentFormatVersion = {model.FormatVersion};");
+        code.AppendLine($"        public const ulong SchemaHash = 0x{SchemaHashValue(model):X16}UL;");
         code.AppendLine().AppendLine("        public override void Decode(ref ProtoReader reader)").AppendLine("        {");
         foreach (LogicalField field in model.Fields) AppendCSharpRead(code, field);
         code.AppendLine("        }").AppendLine("    }").AppendLine("}");
@@ -26,17 +28,25 @@ internal static class SourceGenerator
         string namespaceName = rootNamespace;
         string configNamespace = recordNamespace;
         StringBuilder code = Header();
-        code.AppendLine("using System;").AppendLine("using GameProto;").AppendLine($"using {configNamespace};").AppendLine();
+        code.AppendLine("using System;").AppendLine("using GameProto;");
+        if (configNamespace != "GameProto")
+        {
+            code.AppendLine($"using {configNamespace};");
+        }
+        code.AppendLine();
         code.AppendLine($"namespace {namespaceName}").AppendLine("{");
         code.AppendLine($"    public sealed class {model.ClassName}Table : ConfigTable<uint, {model.ClassName}>").AppendLine("    {");
         code.AppendLine($"        private {model.ClassName}Table()").AppendLine("            : base()").AppendLine("        {").AppendLine("        }");
         code.AppendLine().AppendLine($"        public static {model.ClassName}Table Load(byte[] data)").AppendLine("        {");
         code.AppendLine("            if (data == null)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"加载配置失败：data 不能为 null。\");").AppendLine("                return null;").AppendLine("            }");
-        code.AppendLine().AppendLine("            var reader = new ProtoReader(data);").AppendLine("            ConfigFileHeader header = ConfigFileHeader.Decode(ref reader);");
+        code.AppendLine().AppendLine("            var reader = new ProtoReader(data);").AppendLine($"            ConfigFileHeader header = ConfigFileHeader.Decode(ref reader, {model.ClassName}.CurrentFormatVersion);");
         code.AppendLine($"            if (header.SchemaHash != {model.ClassName}.SchemaHash)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置 Schema Hash 不匹配。\");").AppendLine("                return null;").AppendLine("            }");
         code.AppendLine().AppendLine("            if (header.RecordCount > int.MaxValue)").AppendLine("            {").AppendLine("                ConfigLog.Error(\"配置记录数超出 int 范围。\");").AppendLine("                return null;").AppendLine("            }");
         code.AppendLine().AppendLine($"            var table = new {model.ClassName}Table();").AppendLine("            for (int i = 0; i < (int)header.RecordCount; i++)").AppendLine("            {");
-        code.AppendLine($"                var item = new {model.ClassName}();").AppendLine("                item.Decode(ref reader);").AppendLine($"                table.Add(item.{model.KeyFieldName}, item);").AppendLine("            }");
+        code.AppendLine("                if (reader.Remaining < sizeof(int))").AppendLine("                {").AppendLine("                    ConfigLog.Error(\"配置记录缺少长度字段。\");").AppendLine("                    return null;").AppendLine("                }");
+        code.AppendLine("                int recordLength = reader.ReadInt32();").AppendLine("                if (recordLength < 0 || recordLength > reader.Remaining)").AppendLine("                {").AppendLine("                    ConfigLog.Error($\"配置记录长度无效：{recordLength}，剩余={reader.Remaining}。\");").AppendLine("                    return null;").AppendLine("                }");
+        code.AppendLine("                ProtoReader recordReader = reader.ReadSubReader(recordLength);");
+        code.AppendLine($"                var item = new {model.ClassName}();").AppendLine("                item.Decode(ref recordReader);").AppendLine("                recordReader.EnsureFullyConsumed();").AppendLine($"                table.Add(item.{model.KeyFieldName}, item);").AppendLine("            }");
         code.AppendLine().AppendLine("            reader.EnsureFullyConsumed();").AppendLine("            return table;").AppendLine("        }").AppendLine("    }").AppendLine("}");
         return code.ToString();
     }
@@ -51,6 +61,7 @@ internal static class SourceGenerator
             foreach (ConfigMember member in field.Type.Members) code.AppendLine($"\t{member.Name} {GoType(member.Type)}");
             code.AppendLine("}").AppendLine();
         }
+        code.AppendLine($"const {model.ClassName}CurrentFormatVersion uint32 = {model.FormatVersion}");
         code.AppendLine($"const {model.ClassName}SchemaHash uint64 = 0x{SchemaHashValue(model):X16}").AppendLine();
         code.AppendLine($"type {model.ClassName} struct {{");
         foreach (LogicalField field in model.Fields) code.AppendLine($"\t{field.Name} {GoType(field.Type)}");
@@ -65,12 +76,38 @@ internal static class SourceGenerator
     {
         foreach (LogicalField field in fields.Where(field => field.Type.Kind == ConfigTypeKind.Custom))
         {
+            code.AppendLine("    [StructLayout(LayoutKind.Sequential)]");
             code.AppendLine($"    public sealed class {field.Type.Name}").AppendLine("    {");
-            foreach (ConfigMember member in field.Type.Members) code.AppendLine($"        public {CSharpType(member.Type)} {member.Name} {{ get; }}");
+            foreach (ConfigMember member in OrderForMemoryLayout(field.Type.Members, member => member.Type)) code.AppendLine($"        public {CSharpType(member.Type)} {member.Name} {{ get; }}");
             code.AppendLine().AppendLine($"        public {field.Type.Name}({string.Join(", ", field.Type.Members.Select(member => $"{CSharpType(member.Type)} {Camel(member.Name)}"))})").AppendLine("        {");
             foreach (ConfigMember member in field.Type.Members) code.AppendLine($"            {member.Name} = {Camel(member.Name)};");
             code.AppendLine("        }").AppendLine("    }").AppendLine();
         }
+    }
+
+    private static IEnumerable<T> OrderForMemoryLayout<T>(IEnumerable<T> values, Func<T, ConfigType> typeSelector)
+    {
+        return values.Select((value, index) => new
+        {
+            Value = value,
+            Index = index,
+            Alignment = CSharpAlignment(typeSelector(value))
+        }).OrderByDescending(item => item.Alignment).ThenBy(item => item.Index).Select(item => item.Value);
+    }
+
+    private static int CSharpAlignment(ConfigType type)
+    {
+        if (type.Kind != ConfigTypeKind.Scalar || type.Name == "string")
+        {
+            return 8;
+        }
+
+        return type.Name switch
+        {
+            "long" or "double" => 8,
+            "uint" or "int" or "float" => 4,
+            _ => 1
+        };
     }
 
     private static void AppendCSharpRead(StringBuilder code, LogicalField field)

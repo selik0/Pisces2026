@@ -57,7 +57,9 @@ public static class ConfigTableTool
         string relativeDirectory = Path.GetDirectoryName(Path.GetRelativePath(excelRoot, excelPath)) ?? string.Empty;
         foreach (ConfigSheetModel sheet in ExcelConfigReader.Read(excelPath, settings.DataStartRow))
         {
-            IReadOnlyList<ConfigOutputModel> outputs = ExcelConfigReader.CreateOutputs(sheet, exportData);
+            IReadOnlyList<ConfigOutputModel> outputs = ExcelConfigReader.CreateOutputs(sheet, exportData)
+                .Select(output => ApplyGeneratedSchema(projectRoot, settings, output))
+                .ToList();
             foreach (IGrouping<ExportTarget, ConfigOutputModel> targetOutputs in outputs.GroupBy(output => output.Target))
             {
                 ConfigOutputModel canonical = targetOutputs.First();
@@ -74,10 +76,17 @@ public static class ConfigTableTool
         }
     }
 
+    private static ConfigOutputModel ApplyGeneratedSchema(string projectRoot, GeneratorSettings settings, ConfigOutputModel model)
+    {
+        string path = model.Target == ExportTarget.Client
+            ? Path.Combine(Resolve(projectRoot, settings.ClientCodeDirectory), model.ClassName + ".g.cs")
+            : Path.Combine(Resolve(projectRoot, settings.ServerCodeDirectory), Snake(model.ClassName) + ".gen.go");
+        return GeneratedCodeSchema.Apply(path, model);
+    }
+
     private static void ValidateVariantSchemas(string excelPath, ConfigSheetModel sheet, ConfigOutputModel canonical, IEnumerable<ConfigOutputModel> outputs)
     {
-        byte[] schemaHash = SchemaHash.Compute(canonical);
-        if (outputs.Any(output => !SchemaHash.Compute(output).SequenceEqual(schemaHash)))
+        if (outputs.Any(output => output.FormatVersion != canonical.FormatVersion || !SchemaHash.Compute(output).SequenceEqual(SchemaHash.Compute(canonical))))
         {
             throw new InvalidDataException($"{excelPath}，Sheet={sheet.SheetName}：同一导出目标的 CreateFile 变体字段结构不一致");
         }

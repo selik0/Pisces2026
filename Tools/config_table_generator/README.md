@@ -128,7 +128,11 @@ GCFG Magic       4 bytes
 FormatVersion    uint32, little-endian
 SchemaHash       SHA-256 规范模型的前 8 bytes
 RecordCount      uint32, little-endian
-Records          按表头字段顺序编码
+Records          每条记录为 int32 byteLength + 按生成类 Decode 顺序编码的数据
 ```
 
 字符串和 bytes 使用 `uint32 byteLength + data`，数组使用 `uint32 count + elements`。所有文本均使用严格 UTF-8，无 BOM。
+
+工具会先读取已有生成代码的 `Decode` 字段赋值顺序，以该顺序重排当前模型中仍存在的字段，并将新增字段追加到末尾。字段结构发生变化时 `CurrentFormatVersion` 自动加 1；首次生成时版本为 1。读取单条记录时会使用记录长度创建有界读取器，字段解码不会越过该记录。
+
+C# 生成类使用 `StructLayout(LayoutKind.Sequential)`，属性声明按引用类型、8 字节、4 字节、1 字节的对齐优先级排序。属性声明顺序只用于改善对象字段布局，不参与 Schema Hash 或二进制字段顺序计算。

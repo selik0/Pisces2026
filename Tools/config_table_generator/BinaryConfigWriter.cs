@@ -11,15 +11,20 @@ internal static class BinaryConfigWriter
         using MemoryStream stream = new();
         using BinaryWriter writer = new(stream, Utf8, true);
         writer.Write(new byte[] { (byte)'G', (byte)'C', (byte)'F', (byte)'G' });
-        writer.Write(1U);
+        writer.Write(model.FormatVersion);
         writer.Write(SchemaHash.Compute(model));
         writer.Write(checked((uint)model.Rows.Count));
         foreach (LogicalRow row in model.Rows)
         {
+            using MemoryStream recordStream = new();
+            using BinaryWriter recordWriter = new(recordStream, Utf8, true);
             for (int i = 0; i < model.Fields.Count; i++)
             {
-                WriteValue(writer, model.Fields[i].Type, row.Values[i]);
+                WriteValue(recordWriter, model.Fields[i].Type, row.Values[i]);
             }
+            recordWriter.Flush();
+            writer.Write(checked((int)recordStream.Length));
+            recordStream.WriteTo(stream);
         }
         return stream.ToArray();
     }

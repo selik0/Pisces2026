@@ -217,6 +217,7 @@ internal static class ExcelConfigReader
             KeyFieldName = sheet.KeyFieldName,
             Target = target,
             FileSuffix = suffix,
+            FormatVersion = 1,
             Fields = fields,
             Rows = rows
         };
