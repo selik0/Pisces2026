@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using GameEngine;
 using UnityEditor;
+using UnityEditor.Experimental.SceneManagement;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace GameEngineEditor
@@ -512,8 +514,39 @@ namespace GameLogic
                 return;
             }
 
-            string generatedFolder = Path.Combine(runtimeRoot, "UI/Generated");
-            string logicFolder = Path.Combine(runtimeRoot, "UI/Logic");
+            string prefabPath = AssetDatabase.GetAssetPath(collector);
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(collector.gameObject);
+            }
+
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                PrefabStage prefabStage = PrefabStageUtility.GetPrefabStage(collector.gameObject);
+                if (prefabStage != null)
+                {
+                    prefabPath = prefabStage.assetPath;
+                }
+            }
+
+            prefabPath = prefabPath?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                EditorUtility.DisplayDialog("无法生成", "无法确定当前 UIEntity 对应的 Prefab 资产路径。请在 Prefab 资源或 Prefab Mode 中执行生成。", "确定");
+                return;
+            }
+
+            const string uiPrefabMarker = "/UIPrefab/";
+            int uiPrefabIndex = prefabPath?.IndexOf(uiPrefabMarker, StringComparison.Ordinal) ?? -1;
+            string uiSubfolder = string.Empty;
+            if (uiPrefabIndex >= 0)
+            {
+                string prefabDirectory = Path.GetDirectoryName(prefabPath.Substring(uiPrefabIndex + uiPrefabMarker.Length));
+                uiSubfolder = prefabDirectory?.Replace('\\', '/') ?? string.Empty;
+            }
+
+            string generatedFolder = Path.Combine(runtimeRoot, "UI/Generated", uiSubfolder);
+            string logicFolder = Path.Combine(runtimeRoot, "UI/Logic", uiSubfolder);
             string filePath = Path.Combine(generatedFolder, $"{className}_Bind.cs");
             string logicPath = Path.Combine(logicFolder, $"{className}.cs");
             if (File.Exists(filePath) && !File.ReadAllText(filePath).StartsWith("// 自动生成，请勿手动修改", StringComparison.Ordinal))
@@ -528,19 +561,6 @@ namespace GameLogic
             bool logicExists = File.Exists(logicPath);
             if (!logicExists)
             {
-                string prefabPath = AssetDatabase.GetAssetPath(collector.gameObject);
-                if (string.IsNullOrEmpty(prefabPath))
-                {
-                    prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(collector.gameObject);
-                }
-
-                const string uiPrefabSegment = "UIPrefab/";
-                int uiPrefabIndex = prefabPath.IndexOf("/" + uiPrefabSegment, StringComparison.Ordinal);
-                if (uiPrefabIndex >= 0)
-                {
-                    prefabPath = prefabPath.Substring(uiPrefabIndex + 1);
-                }
-
                 string logicCode = LogicClassTemplate.Replace("{ClassName}", className)
                     .Replace("{PrefabPath}", prefabPath.Replace("\"", "\"\""));
                 var handlers = new StringBuilder();
