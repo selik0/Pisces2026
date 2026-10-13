@@ -5,6 +5,9 @@ namespace GameLogic
     {
         public string VersionCheckUrl { get; set; }
 
+        /// <summary>演示模式下不访问服务器，随机模拟版本检查和热更新下载。</summary>
+        public bool SimulateUpdate { get; set; } = true;
+
         /// <summary>为空时使用 Application.version，格式为一至四段非负整数。</summary>
         public string ClientVersion { get; set; }
 

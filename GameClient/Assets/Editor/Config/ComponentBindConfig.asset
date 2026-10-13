@@ -11,82 +11,88 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: -69303018, guid: 8b40643c4be962f4682af46feb28e227, type: 3}
   m_Name: ComponentBindConfig
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   Rules:
   - Prefix: btn
     Priority: 0
     ClassName: UnityEngine.UI.Button
     Auto: 1
-    TemplateCode1: "            {PropertyName}.onClick.AddListener(On{EventName}Click);"
-    TemplateCode2: "        partial void On{EventName}Click();"
-    TemplateCode3: "            {PropertyName}.onClick.RemoveListener(On{EventName}Click);"
+    TemplateCode1: '            {PropertyName}.onClick.AddListener(On{EventName}Click);'
+    TemplateCode2: '        partial void On{EventName}Click();'
+    TemplateCode3: '            {PropertyName}.onClick.RemoveListener(On{EventName}Click);'
   - Prefix: rect
     Priority: 0
     ClassName: UnityEngine.RectTransform
     Auto: 0
-    TemplateCode1: ""
-    TemplateCode2: ""
-    TemplateCode3: ""
+    TemplateCode1: 
+    TemplateCode2: 
+    TemplateCode3: 
   - Prefix: img
     Priority: 0
     ClassName: UnityEngine.UI.Image
     Auto: 0
-    TemplateCode1: ""
-    TemplateCode2: ""
-    TemplateCode3: ""
+    TemplateCode1: 
+    TemplateCode2: 
+    TemplateCode3: 
   - Prefix: txt
     Priority: 10
     ClassName: TMPro.TextMeshProUGUI
     Auto: 0
-    TemplateCode1: ""
-    TemplateCode2: ""
-    TemplateCode3: ""
+    TemplateCode1: 
+    TemplateCode2: 
+    TemplateCode3: 
   - Prefix: txt
     Priority: 0
     ClassName: UnityEngine.UI.Text
     Auto: 0
-    TemplateCode1: ""
-    TemplateCode2: ""
-    TemplateCode3: ""
-  - Prefix: tgl
+    TemplateCode1: 
+    TemplateCode2: 
+    TemplateCode3: 
+  - Prefix: tog
     Priority: 0
     ClassName: UnityEngine.UI.Toggle
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(bool value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);"
+    Auto: 1
+    TemplateCode1: '            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);'
+    TemplateCode2: '        partial void On{EventName}ValueChanged(bool value);'
+    TemplateCode3: '            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);'
   - Prefix: sld
     Priority: 0
     ClassName: UnityEngine.UI.Slider
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(float value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);"
+    Auto: 1
+    TemplateCode1: '            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);'
+    TemplateCode2: '        partial void On{EventName}ValueChanged(float value);'
+    TemplateCode3: '            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);'
   - Prefix: input
     Priority: 10
     ClassName: TMPro.TMP_InputField
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);\n            {PropertyName}.onEndEdit.AddListener(On{EventName}EndEdit);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(string value);\n        partial void On{EventName}EndEdit(string value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);\n            {PropertyName}.onEndEdit.RemoveListener(On{EventName}EndEdit);"
+    Auto: 1
+    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);\n           
+      {PropertyName}.onEndEdit.AddListener(On{EventName}EndEdit);"
+    TemplateCode2: "        partial void On{EventName}ValueChanged(string value);\n       
+      partial void On{EventName}EndEdit(string value);"
+    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);\n           
+      {PropertyName}.onEndEdit.RemoveListener(On{EventName}EndEdit);"
   - Prefix: input
     Priority: 0
     ClassName: UnityEngine.UI.InputField
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);\n            {PropertyName}.onEndEdit.AddListener(On{EventName}EndEdit);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(string value);\n        partial void On{EventName}EndEdit(string value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);\n            {PropertyName}.onEndEdit.RemoveListener(On{EventName}EndEdit);"
-  - Prefix: dropdown
+    Auto: 1
+    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);\n           
+      {PropertyName}.onEndEdit.AddListener(On{EventName}EndEdit);"
+    TemplateCode2: "        partial void On{EventName}ValueChanged(string value);\n       
+      partial void On{EventName}EndEdit(string value);"
+    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);\n           
+      {PropertyName}.onEndEdit.RemoveListener(On{EventName}EndEdit);"
+  - Prefix: drop
     Priority: 10
     ClassName: TMPro.TMP_Dropdown
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(int value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);"
-  - Prefix: dropdown
+    Auto: 1
+    TemplateCode1: '            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);'
+    TemplateCode2: '        partial void On{EventName}ValueChanged(int value);'
+    TemplateCode3: '            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);'
+  - Prefix: drop
     Priority: 0
     ClassName: UnityEngine.UI.Dropdown
-    Auto: 0
-    TemplateCode1: "            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);"
-    TemplateCode2: "        partial void On{EventName}ValueChanged(int value);"
-    TemplateCode3: "            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);"
+    Auto: 1
+    TemplateCode1: '            {PropertyName}.onValueChanged.AddListener(On{EventName}ValueChanged);'
+    TemplateCode2: '        partial void On{EventName}ValueChanged(int value);'
+    TemplateCode3: '            {PropertyName}.onValueChanged.RemoveListener(On{EventName}ValueChanged);'

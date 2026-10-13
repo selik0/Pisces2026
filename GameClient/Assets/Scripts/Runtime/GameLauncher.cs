@@ -11,5 +11,9 @@ public static class GameLauncher
     {
         Platform.SetService(new PlatformImp());
         ManagerHub.Instance.Initialize();
+
+        GameObject startupObject = new GameObject("GameStartup");
+        startupObject.AddComponent<GameStartup>();
+        Object.DontDestroyOnLoad(startupObject);
     }
 }

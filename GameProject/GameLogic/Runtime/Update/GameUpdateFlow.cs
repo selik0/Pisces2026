@@ -23,6 +23,8 @@ namespace GameLogic
         private bool _downloadConfirmed;
         private List<string> _catalogs;
         private string[] _labels;
+        private bool _simulateUpdate;
+        private float _simulationProgress;
 
         public GameUpdateFlow(GameUpdateSettings settings = null)
         {
@@ -124,6 +126,14 @@ namespace GameLogic
                 _downloadConfirmed = false;
                 _catalogs = null;
                 _labels = (string[])(_settings.DownloadLabels ?? Array.Empty<string>()).Clone();
+                _simulateUpdate = _settings.SimulateUpdate;
+                _simulationProgress = 0f;
+                if (_simulateUpdate)
+                {
+                    SetStage(GameUpdateStage.CheckingVersion);
+                    return;
+                }
+
                 RequireWebUrl(_settings.VersionCheckUrl);
                 if (_settings.RequestTimeoutSeconds <= 0)
                 {
@@ -145,6 +155,12 @@ namespace GameLogic
         {
             try
             {
+                if (_simulateUpdate)
+                {
+                    TickSimulation();
+                    return;
+                }
+
                 if (Stage == GameUpdateStage.CheckingVersion)
                 {
                     CheckVersion();
@@ -235,6 +251,64 @@ namespace GameLogic
             catch (Exception exception)
             {
                 Fail(exception);
+            }
+        }
+
+        private void TickSimulation()
+        {
+            if (Stage == GameUpdateStage.CheckingVersion)
+            {
+                _simulationProgress += Time.deltaTime;
+                if (_simulationProgress < 1f)
+                {
+                    return;
+                }
+
+                int result = UnityEngine.Random.Range(0, 100);
+                VersionInfo = new GameUpdateVersionInfo
+                {
+                    MinimumClientVersion = "0.0.0",
+                    LatestClientVersion = "1.0.1",
+                    InstallUrl = "https://example.com/update",
+                    Notice = "发现新版本"
+                };
+
+                if (result < 25)
+                {
+                    HotUpdateRequired = true;
+                    SetStage(GameUpdateStage.WaitingForHotUpdate);
+                }
+                else if (result < 50)
+                {
+                    ForceUpdateRequired = true;
+                    SetStage(GameUpdateStage.WaitingForForceUpdate);
+                }
+                else
+                {
+                    Complete();
+                }
+
+                return;
+            }
+
+            if (Stage == GameUpdateStage.WaitingForHotUpdate && _downloadConfirmed)
+            {
+                _simulationProgress = 0f;
+                SetStage(GameUpdateStage.Downloading);
+                return;
+            }
+
+            if (Stage == GameUpdateStage.Downloading)
+            {
+                _simulationProgress = Mathf.Min(1f, _simulationProgress + Time.deltaTime / 3f);
+                DownloadBytes = 1024 * 1024 * 20;
+                DownloadedBytes = (long)(DownloadBytes * _simulationProgress);
+                DownloadProgress = _simulationProgress;
+                Notify(ProgressChanged);
+                if (_simulationProgress >= 1f)
+                {
+                    Complete();
+                }
             }
         }
 
