@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 using UnityEngine;
 using GameEngine;
 
@@ -37,11 +38,11 @@ namespace GameEngineEditor
             }
 
             // ── 预处理：构建规则表，预解析类型 ──
-            var namedRules = new Dictionary<string, BindRule>();    // prefix → rule（用于命名规则匹配）
-            var autoRules = new List<BindRule>();                   // Auto=true 的规则
+            var namedRules = new Dictionary<string, List<BindRule>>();
+            var autoRules = new Dictionary<string, List<BindRule>>();
             var typeCache = new Dictionary<string, Type>();         // className → Type（避免重复反射）
 
-            foreach (var rule in rules)
+            foreach (var rule in rules.Where(rule => rule != null).OrderByDescending(rule => rule.Priority))
             {
                 if (rule == null || string.IsNullOrEmpty(rule.ClassName) || string.IsNullOrEmpty(rule.Prefix))
                 {
@@ -60,13 +61,22 @@ namespace GameEngineEditor
 
                 if (rule.Auto)
                 {
-                    autoRules.Add(rule);
+                    if (!autoRules.TryGetValue(rule.Prefix, out var candidates))
+                    {
+                        candidates = new List<BindRule>();
+                        autoRules.Add(rule.Prefix, candidates);
+                    }
+
+                    candidates.Add(rule);
                 }
 
-                if (!namedRules.ContainsKey(rule.Prefix))
+                if (!namedRules.TryGetValue(rule.Prefix, out var namedCandidates))
                 {
-                    namedRules[rule.Prefix] = rule;
+                    namedCandidates = new List<BindRule>();
+                    namedRules.Add(rule.Prefix, namedCandidates);
                 }
+
+                namedCandidates.Add(rule);
             }
 
             collector.ComponentList.Clear();
@@ -89,21 +99,33 @@ namespace GameEngineEditor
                 {
                     foreach (var binding in bindings)
                     {
-                        if (!namedRules.TryGetValue(binding.Prefix, out var rule))
+                        if (!namedRules.TryGetValue(binding.Prefix, out var candidates))
                         {
                             continue;
                         }
 
                         string propertyName = GeneratePropertyName(binding.Prefix, binding.NodeName);
-                        CollectFromTransform(collector, t, rule, propertyName, typeCache, addedNames);
+                        CollectFromTransform(collector, t, candidates, propertyName, typeCache, addedNames);
                     }
                 }
 
                 // 2. 自动收集
-                foreach (var autoRule in autoRules)
+                foreach (var group in autoRules)
                 {
-                    string propertyName = BuildAutoPropertyName(nodeName, autoRule.Prefix);
-                    CollectAllFromTransform(collector, t, autoRule, propertyName, typeCache, addedNames);
+                    string propertyName = BuildAutoPropertyName(nodeName, group.Key);
+                    if (addedNames.Contains(propertyName))
+                    {
+                        continue;
+                    }
+
+                    foreach (BindRule rule in group.Value)
+                    {
+                        if (typeCache.TryGetValue(rule.ClassName, out Type type) && t.GetComponent(type) != null)
+                        {
+                            CollectAllFromTransform(collector, t, rule, propertyName, typeCache, addedNames);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -113,28 +135,33 @@ namespace GameEngineEditor
         /// <summary>
         /// 从 Transform 上获取单个命名规则对应的组件并添加。
         /// </summary>
-        private static void CollectFromTransform(UIEntity collector, Transform t, BindRule rule, string propertyName,
+        private static void CollectFromTransform(UIEntity collector, Transform t, List<BindRule> rules, string propertyName,
             Dictionary<string, Type> typeCache, HashSet<string> addedNames)
         {
-            if (!addedNames.Add(propertyName))
+            if (addedNames.Contains(propertyName))
             {
                 return;
             }
 
-            if (!typeCache.TryGetValue(rule.ClassName, out var type))
+            foreach (BindRule rule in rules)
             {
-                Debug.LogWarning($"[UIEntity] 无法解析类型 '{rule.ClassName}'，节点: {t.name}");
+                if (!typeCache.TryGetValue(rule.ClassName, out Type type))
+                {
+                    continue;
+                }
+
+                Component comp = t.GetComponent(type);
+                if (comp == null)
+                {
+                    continue;
+                }
+
+                addedNames.Add(propertyName);
+                collector.ComponentList.Add(new ComponentInfo { Name = propertyName, Obj = comp });
                 return;
             }
 
-            Component comp = t.GetComponent(type);
-            if (comp == null)
-            {
-                Debug.LogWarning($"[UIEntity] 节点 '{t.name}' 上未找到类型 '{rule.ClassName}' 的组件");
-                return;
-            }
-
-            collector.ComponentList.Add(new ComponentInfo { Name = propertyName, Obj = comp });
+            Log.Warning($"[UIEntity] 节点 '{t.name}' 未找到前缀 '{rules[0].Prefix}' 对应的任何组件。");
         }
 
         /// <summary>

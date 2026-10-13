@@ -13,19 +13,26 @@ namespace GameEngine
         /// <summary>组件缩写，如 rect、img</summary>
         public string Prefix;
 
+        /// <summary>同名前缀的匹配优先级，数值越大越优先；相同时按配置顺序匹配。</summary>
+        public int Priority;
+
         /// <summary>组件类型，包含完整命名空间，如 UnityEngine.UI.Image</summary>
         public string ClassName;
 
         /// <summary>true 表示自动收集，false 表示根据命名规则收集</summary>
         public bool Auto;
 
-        /// <summary>组件事件绑定代码模板</summary>
+        /// <summary>直接插入 OnBind 的 UI 事件注册语句，{EventName} 为去掉前缀且首字母大写的组件名称。</summary>
         [TextArea(3, 10)]
         public string TemplateCode1;
 
-        /// <summary>组件事件绑定方法模板</summary>
+        /// <summary>事件回调方法模板，可通过 partial void 声明将业务实现放入独立逻辑文件。</summary>
         [TextArea(3, 10)]
         public string TemplateCode2;
+
+        /// <summary>直接插入 OnUnbind 的 UI 事件注销语句。</summary>
+        [TextArea(3, 10)]
+        public string TemplateCode3;
     }
 
     /// <summary>
@@ -39,29 +46,17 @@ namespace GameEngine
         public List<BindRule> Rules = new List<BindRule>();
 
         /// <summary>
-        /// 根据组件缩写查找对应的 ClassName。
+        /// 根据组件缩写查找最高优先级规则对应的 ClassName。
         /// </summary>
         /// <param name="prefix">组件缩写</param>
         /// <returns>完整类型名，未找到返回 null</returns>
         public string GetClassName(string prefix)
         {
-            if (Rules == null)
-            {
-                return null;
-            }
-
-            foreach (var rule in Rules)
-            {
-                if (rule != null && rule.Prefix == prefix)
-                {
-                    return rule.ClassName;
-                }
-            }
-            return null;
+            return GetRule(prefix)?.ClassName;
         }
 
         /// <summary>
-        /// 根据组件缩写查找对应的绑定规则。
+        /// 根据组件缩写查找最高优先级绑定规则；优先级相同时返回配置中较早的规则。
         /// </summary>
         public BindRule GetRule(string prefix)
         {
@@ -70,14 +65,16 @@ namespace GameEngine
                 return null;
             }
 
+            BindRule selected = null;
             foreach (var rule in Rules)
             {
-                if (rule != null && rule.Prefix == prefix)
+                if (rule != null && rule.Prefix == prefix &&
+                    (selected == null || rule.Priority > selected.Priority))
                 {
-                    return rule;
+                    selected = rule;
                 }
             }
-            return null;
+            return selected;
         }
     }
 }

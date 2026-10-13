@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using GameEngine;
 using UnityEditor;
@@ -20,26 +21,44 @@ namespace GameEngineEditor
         // ======================================================================
 
         private SerializedProperty _componentListProp;
-        private SerializedProperty _generatedClassPathProp;
 
         // 代码生成模板
         private const string DefaultClassTemplate =
 @"// 自动生成，请勿手动修改
 // 生成时间：{GenTime}
-using UnityEngine;
-using UnityEngine.UI;
+using GameEngine;
 
-namespace GameEngine
-{{
-    public partial class {ClassName} : UIEntity
-    {{
+namespace GameLogic
+{
+    public partial class {ClassName}
+    {
 {Properties}
-    }}
-}}
+    }
+}
 ";
 
         private const string DefaultPropertyTemplate =
 @"        public {TypeName} {PropertyName};";
+
+        private const string LogicClassTemplate =
+@"using GameEngine;
+
+namespace GameLogic
+{
+    public partial class {ClassName} : UIView
+    {
+        // 设置为当前 UI 加载器使用的预制体地址。
+        public override string PrefabPath => @""{PrefabPath}"";
+
+        protected override void OnOpen()
+        {
+            base.OnOpen();
+        }
+
+{EventHandlers}
+    }
+}
+";
 
         // ======================================================================
         //  生命周期
@@ -48,7 +67,6 @@ namespace GameEngine
         private void OnEnable()
         {
             _componentListProp = serializedObject.FindProperty(nameof(UIEntity.ComponentList));
-            _generatedClassPathProp = serializedObject.FindProperty(nameof(UIEntity.GeneratedClassPath));
         }
 
         public override void OnInspectorGUI()
@@ -61,7 +79,8 @@ namespace GameEngine
             EditorUIHelper.DrawSectionHeader("UI 组件收集器");
 
             // ── 生成路径 ──
-            EditorGUILayout.PropertyField(_generatedClassPathProp, new GUIContent("代码生成路径"));
+            EditorGUILayout.LabelField("属性绑定路径", "GameLogic/Runtime/UI/Generated");
+            EditorGUILayout.LabelField("逻辑代码路径", "GameLogic/Runtime/UI/Logic");
 
             EditorGUILayout.Space(4);
 
@@ -311,6 +330,16 @@ namespace GameEngine
         /// </summary>
         private void GenerateCode(UIEntity collector)
         {
+            string className = collector.name;
+            using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
+            {
+                if (!provider.IsValidIdentifier(className))
+                {
+                    EditorUtility.DisplayDialog("无法生成", "UI 根节点名称必须是合法的 C# 类型标识符。", "确定");
+                    return;
+                }
+            }
+
             if (collector.ComponentList == null || collector.ComponentList.Count == 0)
             {
                 EditorUtility.DisplayDialog("提示", "组件列表为空，请先收集组件。", "确定");
@@ -384,6 +413,13 @@ namespace GameEngine
                 warnings.Add(msg);
             }
 
+            // 重复属性会生成无法编译的代码，必须先修正。
+            if (duplicates.Count > 0)
+            {
+                EditorUtility.DisplayDialog("无法生成", string.Join("\n", duplicates), "确定");
+                return;
+            }
+
             // 有警告则弹窗确认
             if (warnings.Count > 0)
             {
@@ -401,7 +437,11 @@ namespace GameEngine
 
             // ── 构建属性代码块 ──
             StringBuilder propertiesBuilder = new StringBuilder();
-            Dictionary<string, string> eventMethods = new Dictionary<string, string>();
+            StringBuilder assignments = new StringBuilder();
+            StringBuilder clearAssignments = new StringBuilder();
+            StringBuilder bindEvents = new StringBuilder();
+            StringBuilder unbindEvents = new StringBuilder();
+            StringBuilder eventMethods = new StringBuilder();
 
             for (int i = 0; i < collector.ComponentList.Count; i++)
             {
@@ -413,77 +453,172 @@ namespace GameEngine
 
                 string propertyName = info.Name;
                 string typeName = GetTypeNameForComponent(info.Obj);
+                using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
+                {
+                    if (!provider.IsValidIdentifier(propertyName))
+                    {
+                        EditorUtility.DisplayDialog("无法生成", $"组件属性名不是合法标识符：{propertyName}", "确定");
+                        return;
+                    }
+                }
 
                 // 添加属性声明
-                propertiesBuilder.AppendLine(string.Format(DefaultPropertyTemplate, typeName, propertyName));
+                propertiesBuilder.AppendLine(DefaultPropertyTemplate
+                    .Replace("{TypeName}", typeName)
+                    .Replace("{PropertyName}", propertyName));
 
-                // 查找对应的绑定规则以生成事件绑定代码
+                assignments.AppendLine($"            {propertyName} = Entity.GetCollectedComponent<{typeName}>(\"{propertyName}\");");
+                clearAssignments.AppendLine($"            {propertyName} = null;");
                 BindRule rule = FindRuleForProperty(collector, info);
-                if (rule != null)
+                if (rule != null && !string.IsNullOrWhiteSpace(rule.TemplateCode1))
                 {
-                    // 如果有 TemplateCode1（事件绑定代码），生成
-                    if (!string.IsNullOrEmpty(rule.TemplateCode1))
-                    {
-                        propertiesBuilder.AppendLine();
-                        propertiesBuilder.AppendLine(ReplaceTemplate(rule.TemplateCode1, propertyName, collector.name));
-                    }
-
-                    // 如果有 TemplateCode2（事件绑定方法），收集
-                    if (!string.IsNullOrEmpty(rule.TemplateCode2))
-                    {
-                        string methodCode = ReplaceTemplate(rule.TemplateCode2, propertyName, collector.name);
-                        string methodKey = $"Method_{propertyName}";
-                        if (!eventMethods.ContainsKey(methodKey))
-                        {
-                            eventMethods[methodKey] = methodCode;
-                        }
-                    }
+                    string eventName = GetEventName(propertyName, rule.Prefix);
+                    bindEvents.AppendLine(ReplaceTemplate(rule.TemplateCode1, propertyName, typeName, className, eventName));
+                    eventMethods.AppendLine(ReplaceTemplate(rule.TemplateCode2, propertyName, typeName, className, eventName));
+                    unbindEvents.AppendLine(ReplaceTemplate(rule.TemplateCode3, propertyName, typeName, className, eventName));
+                }
+                else
+                {
+                    AppendComponentEvents(info, bindEvents, unbindEvents, eventMethods);
                 }
             }
 
-            // 如果有事件方法模板，添加方法区域
-            if (eventMethods.Count > 0)
-            {
-                propertiesBuilder.AppendLine();
-                propertiesBuilder.AppendLine("        #region 事件绑定方法");
-                foreach (var kvp in eventMethods)
-                {
-                    propertiesBuilder.AppendLine(kvp.Value);
-                }
-                propertiesBuilder.AppendLine("        #endregion");
-            }
+            propertiesBuilder.AppendLine($@"
+        protected override void OnBind()
+        {{
+            base.OnBind();
+{assignments}
+{bindEvents}        }}
+
+        protected override void OnUnbind()
+        {{
+{unbindEvents}
+{clearAssignments}            base.OnUnbind();
+        }}
+
+{eventMethods}");
 
             // 生成完整类代码
-            string className = collector.name.Replace(" ", "").Replace("(", "").Replace(")", "");
             string classCode = DefaultClassTemplate
                 .Replace("{ClassName}", className)
                 .Replace("{GenTime}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
                 .Replace("{Properties}", propertiesBuilder.ToString());
 
             // 写入文件
-            string folder = Path.Combine(Application.dataPath, collector.GeneratedClassPath);
-            if (!Directory.Exists(folder))
+            string runtimeRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "../../GameProject/GameLogic/Runtime"));
+            if (!Directory.Exists(runtimeRoot))
             {
-                Directory.CreateDirectory(folder);
+                EditorUtility.DisplayDialog("无法生成", $"找不到业务源码根目录：{runtimeRoot}", "确定");
+                return;
             }
 
-            string filePath = Path.Combine(folder, $"{className}.cs");
-            string message;
-
-            if (File.Exists(filePath))
+            string generatedFolder = Path.Combine(runtimeRoot, "UI/Generated");
+            string logicFolder = Path.Combine(runtimeRoot, "UI/Logic");
+            string filePath = Path.Combine(generatedFolder, $"{className}_Bind.cs");
+            string logicPath = Path.Combine(logicFolder, $"{className}.cs");
+            if (File.Exists(filePath) && !File.ReadAllText(filePath).StartsWith("// 自动生成，请勿手动修改", StringComparison.Ordinal))
             {
-                File.WriteAllText(filePath, classCode, Encoding.UTF8);
-                message = $"代码已覆盖写入：{filePath}\n\n内容共 {classCode.Length} 字符。";
-            }
-            else
-            {
-                File.WriteAllText(filePath, classCode, Encoding.UTF8);
-                message = $"代码已生成：{filePath}\n\n内容共 {classCode.Length} 字符。";
+                EditorUtility.DisplayDialog("无法生成", $"目标文件不包含自动生成标记，请先检查手写内容：{filePath}", "确定");
+                return;
             }
 
+            Directory.CreateDirectory(generatedFolder);
+            Directory.CreateDirectory(logicFolder);
+            File.WriteAllText(filePath, classCode, Encoding.UTF8);
+            bool logicExists = File.Exists(logicPath);
+            if (!logicExists)
+            {
+                string prefabPath = AssetDatabase.GetAssetPath(collector.gameObject);
+                if (string.IsNullOrEmpty(prefabPath))
+                {
+                    prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(collector.gameObject);
+                }
+
+                const string uiPrefabSegment = "UIPrefab/";
+                int uiPrefabIndex = prefabPath.IndexOf("/" + uiPrefabSegment, StringComparison.Ordinal);
+                if (uiPrefabIndex >= 0)
+                {
+                    prefabPath = prefabPath.Substring(uiPrefabIndex + 1);
+                }
+
+                string logicCode = LogicClassTemplate.Replace("{ClassName}", className)
+                    .Replace("{PrefabPath}", prefabPath.Replace("\"", "\"\""));
+                var handlers = new StringBuilder();
+                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
+                    eventMethods.ToString(), @"        partial void ([^;]+);"))
+                {
+                    handlers.AppendLine($"        partial void {match.Groups[1].Value}\n        {{\n        }}\n");
+                }
+
+                logicCode = logicCode.Replace("{EventHandlers}", handlers.ToString());
+                File.WriteAllText(logicPath, logicCode, Encoding.UTF8);
+            }
+
+            string message = $"属性与事件绑定代码：{filePath}\n\n逻辑代码：{logicPath}\n{(logicExists ? "已保留现有逻辑文件。" : "已创建逻辑文件。请确认 PrefabPath 与加载器匹配。 ")}\n\n请编译 GameProject 后在 Unity 中使用。";
             AssetDatabase.Refresh();
             EditorUtility.DisplayDialog("生成完成", message, "确定");
-            Debug.Log($"[UIEntityInspector] 代码已生成: {filePath}");
+            Log.Debug($"[UIEntityInspector] 代码已生成: {filePath}");
+        }
+
+        private static void AppendComponentEvents(ComponentInfo info, StringBuilder bindEvents,
+            StringBuilder unbindEvents, StringBuilder eventMethods)
+        {
+            if (info.Obj is UnityEngine.UI.Button)
+            {
+                AppendEvent(info.Name, "onClick", "Click", "", bindEvents, unbindEvents, eventMethods);
+            }
+            else if (info.Obj is UnityEngine.UI.Toggle)
+            {
+                AppendEvent(info.Name, "onValueChanged", "ValueChanged", "bool", bindEvents, unbindEvents, eventMethods);
+            }
+            else if (info.Obj is UnityEngine.UI.Slider || info.Obj is UnityEngine.UI.Scrollbar)
+            {
+                AppendEvent(info.Name, "onValueChanged", "ValueChanged", "float", bindEvents, unbindEvents, eventMethods);
+            }
+            else if (info.Obj is UnityEngine.UI.InputField || info.Obj is TMPro.TMP_InputField)
+            {
+                AppendEvent(info.Name, "onValueChanged", "ValueChanged", "string", bindEvents, unbindEvents, eventMethods);
+                AppendEvent(info.Name, "onEndEdit", "EndEdit", "string", bindEvents, unbindEvents, eventMethods);
+            }
+            else if (info.Obj is UnityEngine.UI.Dropdown || info.Obj is TMPro.TMP_Dropdown)
+            {
+                AppendEvent(info.Name, "onValueChanged", "ValueChanged", "int", bindEvents, unbindEvents, eventMethods);
+            }
+            else if (info.Obj is UnityEngine.UI.ScrollRect)
+            {
+                AppendEvent(info.Name, "onValueChanged", "ValueChanged", "UnityEngine.Vector2", bindEvents, unbindEvents, eventMethods);
+            }
+        }
+
+        private static void AppendEvent(string propertyName, string eventName, string suffix, string parameterType,
+            StringBuilder bindEvents, StringBuilder unbindEvents, StringBuilder eventMethods)
+        {
+            string prefix = "";
+            foreach (BindRule rule in GetAllBindRulesFromAssetDatabase())
+            {
+                if (propertyName.StartsWith(rule.Prefix, StringComparison.Ordinal) && rule.Prefix.Length > prefix.Length)
+                {
+                    prefix = rule.Prefix;
+                }
+            }
+
+            string methodName = $"On{GetEventName(propertyName, prefix)}{suffix}";
+            string parameter = string.IsNullOrEmpty(parameterType) ? "" : parameterType + " value";
+            bindEvents.AppendLine($"            {propertyName}.{eventName}.AddListener({methodName});");
+            unbindEvents.AppendLine($"            {propertyName}.{eventName}.RemoveListener({methodName});");
+            eventMethods.AppendLine($"        partial void {methodName}({parameter});");
+        }
+
+        private static string GetEventName(string propertyName, string prefix)
+        {
+            string name = propertyName.StartsWith(prefix, StringComparison.Ordinal)
+                ? propertyName.Substring(prefix.Length) : propertyName;
+            if (name.Length == 0)
+            {
+                name = propertyName;
+            }
+
+            return char.ToUpperInvariant(name[0]) + name.Substring(1);
         }
 
         /// <summary>
@@ -505,7 +640,6 @@ namespace GameEngine
         private static List<BindRule> GetAllBindRulesFromAssetDatabase()
         {
             var result = new List<BindRule>();
-            var mergedRules = new Dictionary<string, BindRule>();
 
             string[] guids = AssetDatabase.FindAssets("t:ComponentBindConfig");
             foreach (string guid in guids)
@@ -519,15 +653,14 @@ namespace GameEngine
 
                 foreach (var rule in config.Rules)
                 {
-                    if (rule != null && !string.IsNullOrEmpty(rule.Prefix) && !mergedRules.ContainsKey(rule.Prefix))
+                    if (rule != null && !string.IsNullOrEmpty(rule.Prefix) && !string.IsNullOrEmpty(rule.ClassName))
                     {
-                        mergedRules[rule.Prefix] = rule;
                         result.Add(rule);
                     }
                 }
             }
 
-            return result;
+            return result.OrderByDescending(rule => rule.Priority).ToList();
         }
 
         /// <summary>
@@ -545,7 +678,7 @@ namespace GameEngine
             var allTransforms = collector.GetComponentsInChildren<Transform>(true);
             foreach (var t in allTransforms)
             {
-                if (t == collector.transform)
+                if (t == collector.transform || t != info.Obj.transform)
                 {
                     continue;
                 }
@@ -565,12 +698,23 @@ namespace GameEngine
                         // 在所有规则中查找匹配的 Prefix
                         foreach (var rule in allRules)
                         {
-                            if (rule.Prefix == binding.Prefix)
+                            Type type = UIEntityHelper.ResolveType(rule.ClassName);
+                            if (rule.Prefix == binding.Prefix && type != null && type.IsInstanceOfType(info.Obj))
                             {
                                 return rule;
                             }
                         }
                     }
+                }
+            }
+
+            foreach (BindRule rule in allRules)
+            {
+                Type type = UIEntityHelper.ResolveType(rule.ClassName);
+                if (type != null && type.IsInstanceOfType(info.Obj) &&
+                    info.Name.StartsWith(rule.Prefix, StringComparison.Ordinal))
+                {
+                    return rule;
                 }
             }
 
@@ -581,10 +725,11 @@ namespace GameEngine
         /// 替换模板中的占位符。
         /// 占位符约定：
         ///   {PropertyName} → 属性名
+        ///   {EventName} → 去掉组件前缀并将首字母大写后的名称
         ///   {TypeName}      → 类型名
         ///   {GameObjectName} → 所属 GameObject 名称
         /// </summary>
-        private string ReplaceTemplate(string template, string propertyName, string gameObjectName)
+        private string ReplaceTemplate(string template, string propertyName, string typeName, string gameObjectName, string eventName)
         {
             if (string.IsNullOrEmpty(template))
             {
@@ -592,8 +737,9 @@ namespace GameEngine
             }
 
             return template
+                .Replace("{EventName}", eventName)
                 .Replace("{PropertyName}", propertyName)
-                .Replace("{TypeName}", "Component")
+                .Replace("{TypeName}", typeName)
                 .Replace("{GameObjectName}", gameObjectName);
         }
 
