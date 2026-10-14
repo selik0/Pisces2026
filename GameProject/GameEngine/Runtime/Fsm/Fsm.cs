@@ -293,8 +293,10 @@ namespace GameEngine
             // 处理挂起的状态切换
             if (_pendingStateType != null)
             {
-                DoChangeState(_pendingStateType);
+                Type pendingStateType = _pendingStateType;
                 _pendingStateType = null;
+                // OnEnter 中可能请求下一次切换，必须先消费本次请求。
+                DoChangeState(pendingStateType);
             }
         }
 

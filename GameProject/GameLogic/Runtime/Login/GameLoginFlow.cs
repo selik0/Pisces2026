@@ -1,3 +1,4 @@
+using System;
 using GameEngine;
 
 namespace GameLogic
@@ -22,6 +23,9 @@ namespace GameLogic
         /// <summary>登录失败原因。</summary>
         public string ErrorMessage { get; private set; }
 
+        /// <summary>流程完成通知；参数表示是否成功，成功时本地凭据已保存。</summary>
+        public event Action<bool> Completed;
+
         /// <summary>启动登录流程。</summary>
         public void Start()
         {
@@ -45,6 +49,11 @@ namespace GameLogic
             {
                 _fsm.Start<PrepareLoginState>();
             }
+            else
+            {
+                ErrorMessage = "无法创建登录流程";
+                Completed?.Invoke(false);
+            }
         }
 
         /// <summary>停止并销毁登录流程。</summary>
@@ -61,9 +70,9 @@ namespace GameLogic
         {
             protected override void OnEnter(IFsm<GameLoginFlow> fsm)
             {
-                if (string.IsNullOrEmpty(fsm.Owner.Account) || string.IsNullOrEmpty(fsm.Owner.Credential))
+                if (string.IsNullOrWhiteSpace(fsm.Owner.Account))
                 {
-                    fsm.Owner.ErrorMessage = "登录账号或凭据为空";
+                    fsm.Owner.ErrorMessage = "登录账号为空";
                     ChangeState<LoginFailedState>(fsm);
                     return;
                 }
@@ -77,7 +86,7 @@ namespace GameLogic
         {
             protected override void OnEnter(IFsm<GameLoginFlow> fsm)
             {
-                // 这里请求登录服务器，网络回调中设置 LoginSucceeded 和 ErrorMessage。
+                // 模拟登录：任意非空账号均成功，不校验密码。
                 fsm.Owner.LoginSucceeded = true;
                 ChangeState(fsm, fsm.Owner.LoginSucceeded
                     ? typeof(SyncLoginDataState)
@@ -98,8 +107,25 @@ namespace GameLogic
         {
             protected override void OnEnter(IFsm<GameLoginFlow> fsm)
             {
-                // 这里通知启动器进入主界面或游戏主场景。
+                try
+                {
+                    LocalDataManager.Instance.Save(new LoginSaveData
+                    {
+                        Account = fsm.Owner.Account,
+                        Password = fsm.Owner.Credential ?? string.Empty
+                    });
+                }
+                catch (Exception exception)
+                {
+                    fsm.Owner.LoginSucceeded = false;
+                    fsm.Owner.ErrorMessage = "保存登录信息失败";
+                    Log.Error("[GameLoginFlow] 保存登录信息失败", exception);
+                    ChangeState<LoginFailedState>(fsm);
+                    return;
+                }
+
                 Log.Debug("[GameLoginFlow] 登录流程完成");
+                fsm.Owner.Completed?.Invoke(true);
             }
         }
 
@@ -108,7 +134,7 @@ namespace GameLogic
             protected override void OnEnter(IFsm<GameLoginFlow> fsm)
             {
                 Log.Error($"[GameLoginFlow] 登录失败：{fsm.Owner.ErrorMessage ?? "未知错误"}");
-                // 这里显示登录失败提示，并允许用户重试或返回登录页。
+                fsm.Owner.Completed?.Invoke(false);
             }
         }
     }
