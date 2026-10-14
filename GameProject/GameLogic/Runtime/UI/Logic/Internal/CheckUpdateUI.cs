@@ -88,8 +88,14 @@ namespace GameLogic
 
         private void OnUpdateCompleted()
         {
+            if (State != UIBrickState.Opened)
+            {
+                return;
+            }
+
             txtMsg.text = "更新完成";
             CloseSelf();
+            UIManager.Instance.OpenView<LoginUI>();
         }
 
         private void OnUpdateFailed()
