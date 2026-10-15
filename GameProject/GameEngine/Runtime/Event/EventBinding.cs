@@ -86,7 +86,7 @@ namespace GameEngine
             {
                 foreach (Delegate callback in _callbacks)
                 {
-                    InvokeCallback(() => ((Action)callback)(), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
+                    ((Action)callback)();
                 }
             }
             finally
@@ -109,7 +109,7 @@ namespace GameEngine
             {
                 foreach (Delegate callback in _callbacks)
                 {
-                    InvokeCallback(() => ((Action<T1>)callback)(arg1), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
+                    ((Action<T1>)callback)(arg1);
                 }
             }
             finally
@@ -135,7 +135,7 @@ namespace GameEngine
             {
                 foreach (Delegate callback in _callbacks)
                 {
-                    InvokeCallback(() => ((Action<T1, T2>)callback)(arg1, arg2), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
+                    ((Action<T1, T2>)callback)(arg1, arg2);
                 }
             }
             finally
@@ -161,7 +161,7 @@ namespace GameEngine
             {
                 foreach (Delegate callback in _callbacks)
                 {
-                    InvokeCallback(() => ((Action<T1, T2, T3>)callback)(arg1, arg2, arg3), $"{callback.Method.DeclaringType?.Name}.{callback.Method.Name}");
+                    ((Action<T1, T2, T3>)callback)(arg1, arg2, arg3);
                 }
             }
             finally
@@ -202,18 +202,6 @@ namespace GameEngine
             }
 
             _pendingOperations.Clear();
-        }
-
-        private void InvokeCallback(Action callback, string listenerName)
-        {
-            try
-            {
-                callback();
-            }
-            catch (Exception caughtException)
-            {
-                Log.Error($"[EventManager] Exception in listener for key={_eventKey} Name={listenerName}", caughtException);
-            }
         }
 
         private bool VaildType<TCallback>() where TCallback : Delegate

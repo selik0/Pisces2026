@@ -444,22 +444,7 @@ namespace GameLogic
 
         private static void Notify(Action handlers)
         {
-            if (handlers == null)
-            {
-                return;
-            }
-
-            foreach (Action handler in handlers.GetInvocationList())
-            {
-                try
-                {
-                    handler();
-                }
-                catch (Exception exception)
-                {
-                    Log.Error("[GameUpdateFlow] 更新流程监听器异常", exception);
-                }
-            }
+            handlers?.Invoke();
         }
 
         private static Version ParseVersion(string text)

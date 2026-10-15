@@ -78,32 +78,9 @@ namespace GameEngine
             Entity.AddDestroyListener(OnEntityDestroyed);
             RefreshSortOrder();
 
-            try
-            {
-                OnBind();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnBind failed.", exception);
-            }
-
-            try
-            {
-                OnCreate();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnCreate failed.", exception);
-            }
-
-            try
-            {
-                RegisterEvents();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.RegisterEvents failed.", exception);
-            }
+            OnBind();
+            OnCreate();
+            RegisterEvents();
 
             State = UIBrickState.Created;
             ProcessPendingEntityDestroy();
@@ -147,14 +124,7 @@ namespace GameEngine
             }
 
             State = UIBrickState.Opening;
-            try
-            {
-                OnOpen();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnOpen failed.", exception);
-            }
+            OnOpen();
 
             Show();
         }
@@ -174,14 +144,7 @@ namespace GameEngine
                 GameObject.SetActive(true);
             }
 
-            try
-            {
-                OnShow();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnShow failed.", exception);
-            }
+            OnShow();
 
             State = UIBrickState.Opened;
             ProcessPendingEntityDestroy();
@@ -197,14 +160,7 @@ namespace GameEngine
             }
 
             State = UIBrickState.Hiding;
-            try
-            {
-                OnHide();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnHide failed.", exception);
-            }
+            OnHide();
 
             IsVisible = false;
             if (GameObject != null)
@@ -230,33 +186,11 @@ namespace GameEngine
                 Hide();
             }
             State = UIBrickState.Closing;
-            try
-            {
-                UnregisterEvents();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.UnregisterEvents failed.", exception);
-            }
-
-            try
-            {
-                OnClose();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnClose failed.", exception);
-            }
+            UnregisterEvents();
+            OnClose();
 
             State = UIBrickState.Closed;
-            try
-            {
-                Closed?.Invoke();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.Closed listener failed.", exception);
-            }
+            Closed?.Invoke();
 
             ProcessPendingEntityDestroy();
         }
@@ -351,23 +285,8 @@ namespace GameEngine
         {
             State = UIBrickState.Destroyed;
 
-            try
-            {
-                OnUnbind();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnUnbind failed.", exception);
-            }
-
-            try
-            {
-                OnDestroy();
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[UIBrick] {GetType().Name}.OnDestroy failed.", exception);
-            }
+            OnUnbind();
+            OnDestroy();
 
             ClearBinding();
         }
