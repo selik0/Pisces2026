@@ -1,17 +1,19 @@
 using GameEngine;
 using UnityEngine;
+using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace GameLogic
 {
     /// <summary>场景加载后的游戏启动流程入口。</summary>
     public sealed class GameStartup : MonoBehaviour
     {
+        private const string EditorMainSceneName = "MainScene";
+        private const string PackageUpdateSceneName = "UpdateScene";
+
         [SerializeField] private CameraRoot _cameraRoot = null;
         [SerializeField] private UIRoot _uiRoot = null;
 
         private static GameStartup _instance;
-        private GameUpdateFlow _updateFlow;
-
         /// <summary>启动时配置的相机根组件。</summary>
         public CameraRoot CameraRoot => _cameraRoot;
 
@@ -23,6 +25,11 @@ namespace GameLogic
             if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);
+                return;
+            }
+
+            if (!EnsureStartupScene())
+            {
                 return;
             }
 
@@ -40,21 +47,44 @@ namespace GameLogic
             DontDestroyOnLoad(_uiRoot.transform.root.gameObject);
 
             UIManager.Instance.Initialize(_uiRoot);
-            _updateFlow = new GameUpdateFlow(new GameUpdateSettings
+            StartStartupFlow();
+        }
+
+        private void StartStartupFlow()
+        {
+            if (GameNative.Platform.IsPCOrEditor)
             {
-                SimulateUpdate = true
-            });
-            UIManager.Instance.OpenView<CheckUpdateUI>(new CheckUpdateUIData(_updateFlow));
+                UIManager.Instance.OpenView<EnterGameUI>();
+            }
+            else
+            {
+                UIManager.Instance.OpenView<CheckUpdateUI>();
+            }
+        }
+
+        private bool EnsureStartupScene()
+        {
+            string currentSceneName = UnitySceneManager.GetActiveScene().name;
+            if (currentSceneName != EditorMainSceneName && currentSceneName != PackageUpdateSceneName)
+            {
+                Log.Error("[GameStartup] 当前场景不正确。");
+                return false;
+            }
+            string expectedSceneName = GameNative.Platform.IsPCOrEditor
+                ? EditorMainSceneName
+                : PackageUpdateSceneName;
+            if (currentSceneName == expectedSceneName)
+            {
+                return true;
+            }
+
+            Log.Warning($"[GameStartup] 当前场景为 {currentSceneName}，将切换到 {expectedSceneName}。");
+            UnitySceneManager.LoadScene(expectedSceneName);
+            return false;
         }
 
         private void OnDestroy()
         {
-            if (_updateFlow != null)
-            {
-                _updateFlow.Destroy();
-                _updateFlow = null;
-            }
-
             if (_instance == this)
             {
                 _instance = null;

@@ -1,0 +1,6 @@
+{
+  "name": "ui-prefab-generator",
+  "displayName": "Unity UI Prefab 与 UIEntity 生成器",
+  "version": "1.0.0",
+  "description": "创建 Pisces2026 Unity UI Prefab，配置 UIEntity 组件收集，调用绑定代码生成器，并接入 UIView partial 逻辑。"
+}

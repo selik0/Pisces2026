@@ -2,7 +2,7 @@
 
 namespace GameLogic
 {
-    public partial class CheckUpdateUI : UIView<CheckUpdateUIData>
+    public partial class CheckUpdateUI : UIView
     {
         // 设置为当前 UI 加载器使用的预制体地址。
         public override string PrefabPath => @"Assets/GameAssets/UIPrefab/Internal/CheckUpdateUI.prefab";
@@ -12,12 +12,10 @@ namespace GameLogic
         protected override void OnOpen()
         {
             base.OnOpen();
-            _updateFlow = Data == null ? null : Data.UpdateFlow;
-            if (_updateFlow == null)
+            _updateFlow = new GameUpdateFlow(new GameUpdateSettings
             {
-                txtMsg.text = "更新流程未配置";
-                return;
-            }
+                SimulateUpdate = true
+            });
 
             _updateFlow.StageChanged += OnStageChanged;
             _updateFlow.ProgressChanged += OnProgressChanged;
@@ -37,6 +35,8 @@ namespace GameLogic
                 _updateFlow.ProgressChanged -= OnProgressChanged;
                 _updateFlow.Completed -= OnUpdateCompleted;
                 _updateFlow.Failed -= OnUpdateFailed;
+                _updateFlow.Destroy();
+                _updateFlow = null;
             }
 
             base.OnClose();
@@ -95,7 +95,7 @@ namespace GameLogic
 
             txtMsg.text = "更新完成";
             CloseSelf();
-            UIManager.Instance.OpenView<LoginUI>();
+            UIManager.Instance.OpenView<EnterGameUI>();
         }
 
         private void OnUpdateFailed()
