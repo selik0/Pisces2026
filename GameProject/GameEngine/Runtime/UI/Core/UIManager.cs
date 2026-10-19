@@ -79,6 +79,7 @@ namespace GameEngine
 
         /// <summary>
         /// 按指定界面类型打开界面。有效的 ownerWindow 必须是已打开的 <see cref="UILayer.Window"/> 界面；
+        /// 仅 Popup、Dialog、Tips 界面可附属于 Window，Window 打开 Window 不建立归属关系。
         /// 无效 ownerWindow 会被视为 null，不影响界面打开。附属界面随 ownerWindow 隐藏、恢复和关闭。
         /// </summary>
         public TView OpenView<TView>(UIViewData data = null, UIView ownerWindow = null) where TView : UIView, new()
@@ -91,6 +92,7 @@ namespace GameEngine
 
         /// <summary>
         /// 将界面加入对应层级的队列。该层为空时立即打开，否则等待；当该层最上层界面关闭且层内清空后，逐个打开队列中的下一个。
+        /// ownerWindow 的归属规则与 OpenView 相同。
         /// </summary>
         public void EnqueueOpen<TView>(UIViewData data = null, UIView ownerWindow = null) where TView : UIView, new()
         {
@@ -326,6 +328,11 @@ namespace GameEngine
             if (view == null)
             {
                 return null;
+            }
+
+            if (view.Layer != UILayer.Popup && view.Layer != UILayer.Dialog && view.Layer != UILayer.Tips)
+            {
+                ownerWindow = null;
             }
 
             view.Open();

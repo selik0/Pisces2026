@@ -31,6 +31,7 @@ namespace GameEngine
 
         /// <summary>
         /// 当前界面附属的 Window 界面。附属界面随该界面隐藏和关闭，但仍按自身 UILayer 规则决定是否显示。
+        /// 仅 Popup、Dialog、Tips 界面可拥有此关系；Window 及其他层级始终为 null。
         /// </summary>
         public UIView OwnerWindow { get; internal set; }
 
