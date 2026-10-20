@@ -9,6 +9,9 @@ namespace GameEngine
     /// </summary>
     public static class PathHelper
     {
+        /// <summary>UI 预制体资源根路径。</summary>
+        public const string UIPrefabRoot = "Assets/GameAssets/UIPrefab";
+
         /// <summary>可写持久化根目录（各平台自动映射）。</summary>
         public static string PersistentRoot => Application.persistentDataPath;
 
@@ -23,6 +26,17 @@ namespace GameEngine
 
         /// <summary>与 Assets 同级的 EditorData 目录。</summary>
         public static string EditorDataPath => Path.Combine(Path.GetDirectoryName(Application.dataPath), "EditorData");
+
+        /// <summary>拼接 UI 预制体资源路径。仅在加载资源时调用。</summary>
+        public static string GetUIPrefabPath(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+            {
+                throw new ArgumentException("Path must be a non-empty relative path.", nameof(relativePath));
+            }
+
+            return $"{UIPrefabRoot}/{relativePath.Replace('\\', '/').TrimStart('/')}";
+        }
 
         /// <summary>拼接持久化目录下的完整路径。</summary>
         public static string ResolvePersistentPath(string relativePath)

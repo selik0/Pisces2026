@@ -9,7 +9,7 @@ namespace GameLogic
         private int _autoLoginTimerId = -1;
         private bool _loginSucceeded;
 
-        public override string PrefabPath => @"Assets/GameAssets/UIPrefab/Internal/EnterGameUI.prefab";
+        public override string PrefabPath => @"Internal/EnterGameUI.prefab";
 
         protected override void OnOpen()
         {

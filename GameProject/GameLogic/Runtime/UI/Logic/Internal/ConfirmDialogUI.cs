@@ -5,7 +5,8 @@ namespace GameLogic
     public partial class ConfirmDialogUI : UIView<ConfirmDialogUIData>
     {
         // 设置为当前 UI 加载器使用的预制体地址。
-        public override string PrefabPath => @"Assets/GameAssets/UIPrefab/Internal/ConfirmDialogUI.prefab";
+        public override string PrefabPath => @"Internal/ConfirmDialogUI.prefab";
+        public override UILayer Layer => UILayer.Dialog;
 
         private bool _handlingClick;
 

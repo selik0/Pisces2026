@@ -13,7 +13,7 @@ public sealed class EditorUIViewLoader : IUIViewLoader
 
     public UIEntity Instantiate(string prefabPath, Transform parent)
     {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PathHelper.GetUIPrefabPath(prefabPath));
         if (prefab == null)
         {
             Log.Error($"[EditorUIViewLoader] 未找到 UI 预制体: {prefabPath}");

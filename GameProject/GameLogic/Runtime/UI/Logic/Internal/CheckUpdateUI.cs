@@ -5,7 +5,7 @@ namespace GameLogic
     public partial class CheckUpdateUI : UIView
     {
         // 设置为当前 UI 加载器使用的预制体地址。
-        public override string PrefabPath => @"Assets/GameAssets/UIPrefab/Internal/CheckUpdateUI.prefab";
+        public override string PrefabPath => @"Internal/CheckUpdateUI.prefab";
 
         private GameUpdateFlow _updateFlow;
 

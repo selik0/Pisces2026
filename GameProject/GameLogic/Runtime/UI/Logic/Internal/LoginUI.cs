@@ -5,11 +5,11 @@ namespace GameLogic
 {
     public partial class LoginUI : UIView
     {
-        private GameLoginFlow _loginFlow;
-
         // 设置为当前 UI 加载器使用的预制体地址。
-        public override string PrefabPath => @"Assets/GameAssets/UIPrefab/Internal/LoginUI.prefab";
+        public override string PrefabPath => @"Internal/LoginUI.prefab";
+        public override UILayer Layer => UILayer.Dialog;
 
+        private GameLoginFlow _loginFlow;
         protected override void OnOpen()
         {
             base.OnOpen();

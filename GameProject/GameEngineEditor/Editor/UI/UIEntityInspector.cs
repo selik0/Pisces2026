@@ -561,8 +561,15 @@ namespace GameLogic
             bool logicExists = File.Exists(logicPath);
             if (!logicExists)
             {
+                string relativePrefabPath = prefabPath;
+                const string prefabRoot = "Assets/GameAssets/UIPrefab/";
+                if (relativePrefabPath.StartsWith(prefabRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    relativePrefabPath = relativePrefabPath.Substring(prefabRoot.Length);
+                }
+
                 string logicCode = LogicClassTemplate.Replace("{ClassName}", className)
-                    .Replace("{PrefabPath}", prefabPath.Replace("\"", "\"\""));
+                    .Replace("{PrefabPath}", relativePrefabPath.Replace("\\", "/").Replace("\"", "\"\""));
                 var handlers = new StringBuilder();
                 foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
                     eventMethods.ToString(), @"        partial void ([^;]+);"))
