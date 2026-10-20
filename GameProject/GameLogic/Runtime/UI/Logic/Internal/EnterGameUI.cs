@@ -17,7 +17,6 @@ namespace GameLogic
             txtVersion.text = $"版本 {Version}";
             txtServer.text = "当前服务器  1区 · 曙光之城";
             txtAntiAddiction.text = "健康游戏，合理安排时间。未成年人请在家长陪同下游戏。";
-            txtStatus.text = "正在自动登录...";
             btnStart.interactable = false;
             _loginSucceeded = false;
             StartAutoLogin();
@@ -38,25 +37,20 @@ namespace GameLogic
 
 #if UNITY_EDITOR
             UIManager.Instance.OpenView<LoginUI>(null, this);
-#else
-            txtStatus.text = "SDK 登录暂未接入";
 #endif
         }
 
         partial void OnNoticeClick()
         {
-            txtStatus.text = "暂无公告";
         }
 
         partial void OnStartClick()
         {
             if (!_loginSucceeded)
             {
-                txtStatus.text = "请先完成登录";
                 return;
             }
 
-            txtStatus.text = $"正在进入 {txtServer.text}...";
             btnStart.interactable = false;
         }
 
@@ -83,12 +77,10 @@ namespace GameLogic
             _loginSucceeded = Random.Range(0, 2) == 1;
             if (_loginSucceeded)
             {
-                txtStatus.text = "自动登录成功，可以开始游戏";
                 btnStart.interactable = true;
                 return;
             }
 
-            txtStatus.text = "自动登录失败，请登录账号";
             UIManager.Instance.OpenView<LoginUI>(null, this);
         }
     }
