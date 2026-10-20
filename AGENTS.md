@@ -213,6 +213,8 @@ foreach (Item item in items)
 - 保持现有命名空间，不要仅根据目录名批量修改命名空间。
 - 核心运行时通常使用 `GameEngine` 命名空间。
 - 编辑器工具通常使用 `GameEngineEditor` 命名空间，但存在历史例外。
+- Unity 客户端 `GameClient/Assets/Scripts/Runtime/` 下的代码统一使用 `GameClient` 命名空间。
+- Unity 客户端 `GameClient/Assets/Scripts/Editor/` 下的代码统一使用 `GameClientEditor` 命名空间。
 - 不要只为缩短方法而创建没有复用价值的辅助类型或包装层。
 
 ### 注释与文档

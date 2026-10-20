@@ -1,0 +1,23 @@
+{
+    "name": "Pisces.Core.Editor",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "GameEngine.dll",
+        "GameEngineEditor.dll",
+        "GameLogic.dll",
+        "GameNative.dll",
+        "GameProto.dll",
+        "EPPlus.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -4,29 +4,32 @@ using GameEngine;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Test : MonoBehaviour
+namespace GameClient
 {
-    public Button button;
-    // Start is called before the first frame update
-    void Start()
+    public class Test : MonoBehaviour
     {
-        button.onClick.AddListener(() =>
+        public Button button;
+        // Start is called before the first frame update
+        void Start()
         {
-            GameEvent.Default.Emit(1);
-        });
-        GameEvent.Default.Subscribe(1, Func);
-    }
+            button.onClick.AddListener(() =>
+            {
+                GameEvent.Default.Emit(1);
+            });
+            GameEvent.Default.Subscribe(1, Func);
+        }
 
-    // Update is called once per frame
-    void Update()
-    {
+        // Update is called once per frame
+        void Update()
+        {
 
-    }
+        }
 
-    void Func()
-    {
-        string str = null;
-        str.ToString();
-        Debug.Log("Test");
+        void Func()
+        {
+            string str = null;
+            str.ToString();
+            Debug.Log("Test");
+        }
     }
 }
