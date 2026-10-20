@@ -13,6 +13,8 @@ namespace GameEngine
     {
         // 使用非泛型包装接口统一存储不同持有者类型的 FSM
         private readonly Dictionary<string, IFsmBase> _fsms = new Dictionary<string, IFsmBase>();
+        private readonly List<KeyValuePair<string, IFsmBase>> _tickSnapshot = new List<KeyValuePair<string, IFsmBase>>();
+        private bool _isTicking;
 
         /// <summary>当前管理的有限状态机数量</summary>
         public int Count => _fsms.Count;
@@ -113,12 +115,32 @@ namespace GameEngine
 
         /// <summary>
         /// 推进所有有限状态机逻辑。应在 MonoBehaviour.Update 中每帧调用。
+        /// 回调中新建的 FSM 从下一次 Tick 开始更新；已移除的实例跳过，嵌套 Tick 不执行。
         /// </summary>
         public void Tick(float deltaTime)
         {
-            foreach (var wrapper in _fsms.Values)
+            if (_isTicking)
             {
-                wrapper.Tick(deltaTime);
+                return;
+            }
+
+            _isTicking = true;
+            try
+            {
+                _tickSnapshot.AddRange(_fsms);
+                foreach (var entry in _tickSnapshot)
+                {
+                    // 回调可能销毁其他 FSM，或用相同的键创建新实例。
+                    if (_fsms.TryGetValue(entry.Key, out var wrapper) && ReferenceEquals(wrapper, entry.Value))
+                    {
+                        wrapper.Tick(deltaTime);
+                    }
+                }
+            }
+            finally
+            {
+                _tickSnapshot.Clear();
+                _isTicking = false;
             }
         }
 
