@@ -7,7 +7,7 @@ namespace GameEngine
     /// <summary>
     /// 游戏运行时路径解析工具。仅负责提供根目录和拼接受限的子路径，不执行文件读写。
     /// </summary>
-    public static class PathHelper
+    public static class PathUtility
     {
         /// <summary>UI 预制体资源根路径。</summary>
         public const string UIPrefabRoot = "Assets/GameAssets/UIPrefab";

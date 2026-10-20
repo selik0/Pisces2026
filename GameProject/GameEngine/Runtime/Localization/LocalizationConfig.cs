@@ -113,7 +113,7 @@ namespace GameEngine
         /// <summary>本地化配置文件根目录（编辑器用 EditorData，其他平台用持久化目录）。</summary>
         private static string GetConfigRoot()
         {
-            return Application.isEditor ? PathHelper.EditorDataPath : PathHelper.PersistentRoot;
+            return Application.isEditor ? PathUtility.EditorDataPath : PathUtility.PersistentRoot;
         }
 
         /// <summary>读取本地化配置，文件不存在或失败时返回 null。</summary>

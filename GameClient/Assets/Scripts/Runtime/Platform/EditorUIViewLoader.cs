@@ -10,7 +10,7 @@ namespace GameClient
     {
         public UIEntity Instantiate(string prefabPath, Transform parent)
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PathHelper.GetUIPrefabPath(prefabPath));
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PathUtility.GetUIPrefabPath(prefabPath));
             if (prefab == null)
             {
                 Log.Error($"[EditorUIViewLoader] 未找到 UI 预制体: {prefabPath}");

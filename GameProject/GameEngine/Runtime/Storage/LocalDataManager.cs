@@ -22,7 +22,7 @@ namespace GameEngine
         private string _roleIDStr = "0";
         public LocalDataManager()
         {
-            _store = new LocalDataStore(PathHelper.PersistentRoot, EncryptionKey);
+            _store = new LocalDataStore(PathUtility.PersistentRoot, EncryptionKey);
         }
 
         public void SetRoleId<T>(T roleID)
@@ -84,9 +84,9 @@ namespace GameEngine
 
             if (IsRoleData(dataType))
             {
-                return PathHelper.GetSavePath(_roleIDStr, dataType.Name, true);
+                return PathUtility.GetSavePath(_roleIDStr, dataType.Name, true);
             }
-            return PathHelper.GetSavePath(_roleIDStr, dataType.Name, false);
+            return PathUtility.GetSavePath(_roleIDStr, dataType.Name, false);
         }
 
         private static bool IsRoleData(Type dataType)

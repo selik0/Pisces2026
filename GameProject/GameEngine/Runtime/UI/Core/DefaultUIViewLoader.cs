@@ -10,7 +10,7 @@ namespace GameEngine
         /// <inheritdoc />
         public UIEntity Instantiate(string prefabPath, Transform parent)
         {
-            GameObject prefab = Resources.Load<GameObject>(PathHelper.GetUIPrefabPath(prefabPath));
+            GameObject prefab = Resources.Load<GameObject>(PathUtility.GetUIPrefabPath(prefabPath));
             if (prefab == null)
             {
                 Log.Error($"[UIViewLoader] 未找到 UI 预制体: {prefabPath}");

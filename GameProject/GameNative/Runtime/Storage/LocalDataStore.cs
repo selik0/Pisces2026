@@ -23,7 +23,7 @@ namespace GameNative
 #endif
         private readonly ILocalDataSerializer _serializer;
 
-        /// <param name="rootDirectory">本地数据根目录，通常传入 GameEngine.PathHelper.PersistentRoot。</param>
+        /// <param name="rootDirectory">本地数据根目录，通常传入 GameEngine.PathUtility.PersistentRoot。</param>
         /// <param name="encryptionKey">16、24 或 32 字节 AES 密钥，后续读取必须使用同一密钥。</param>
         /// <param name="serializer">序列化器，默认使用 Unity JsonUtility。</param>
         public LocalDataStore(string rootDirectory, byte[] encryptionKey, ILocalDataSerializer serializer = null)

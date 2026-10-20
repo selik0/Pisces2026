@@ -175,7 +175,7 @@ namespace GameNative
         /// 平台限制与异常行为同 <see cref="ReadStreamingBytes"/>；
         /// Android / WebGL 请使用 <see cref="ReadStreamingTextAsync"/>。
         /// </summary>
-        /// <param name="path">文件完整路径，使用 PathHelper.ResolveStreamingPath 获取。</param>
+        /// <param name="path">文件完整路径，使用 PathUtility.ResolveStreamingPath 获取。</param>
         public static string ReadStreamingText(string path, Encoding encoding = null)
         {
             byte[] data = ReadStreamingBytes(path);
@@ -188,7 +188,7 @@ namespace GameNative
         /// Android / WebGL 的 StreamingAssets 依赖 UnityWebRequest 且需要主线程推进，
         /// 同步自旋等待会使请求永远无法完成，请改用 <see cref="ReadStreamingBytesAsync"/>。
         /// </summary>
-        /// <param name="path">文件完整路径，使用 PathHelper.ResolveStreamingPath 获取。</param>
+        /// <param name="path">文件完整路径，使用 PathUtility.ResolveStreamingPath 获取。</param>
         /// <exception cref="NotSupportedException">在 Android / WebGL 上调用时抛出。</exception>
         public static byte[] ReadStreamingBytes(string path)
         {
@@ -208,7 +208,7 @@ namespace GameNative
         /// Android / WebGL 的 StreamingAssets 通过 UnityWebRequest 异步读取，
         /// 完成回调由 Unity 主线程触发；其他平台直接读取并同步回调。
         /// </summary>
-        /// <param name="path">文件完整路径，使用 PathHelper.ResolveStreamingPath 获取。</param>
+        /// <param name="path">文件完整路径，使用 PathUtility.ResolveStreamingPath 获取。</param>
         /// <param name="onSuccess">读取成功回调，参数为文件内容。</param>
         /// <param name="onError">读取失败回调，参数为异常；可传 null。</param>
         public static void ReadStreamingBytesAsync(string path, Action<byte[]> onSuccess, Action<Exception> onError)
@@ -248,7 +248,7 @@ namespace GameNative
         /// 从只读资源目录异步读取文本（默认 UTF-8）。
         /// 行为与平台限制同 <see cref="ReadStreamingBytesAsync"/>。
         /// </summary>
-        /// <param name="path">文件完整路径，使用 PathHelper.ResolveStreamingPath 获取。</param>
+        /// <param name="path">文件完整路径，使用 PathUtility.ResolveStreamingPath 获取。</param>
         /// <param name="onSuccess">读取成功回调，参数为文本内容。</param>
         /// <param name="onError">读取失败回调，参数为异常；可传 null。</param>
         /// <param name="encoding">编码，默认 UTF-8。</param>
