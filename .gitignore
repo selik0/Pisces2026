@@ -4,6 +4,7 @@
 # ===== IDE =====
 .vs/
 .idea/
+.dodwork*/
 *.suo
 *.user
 *.userosscache
