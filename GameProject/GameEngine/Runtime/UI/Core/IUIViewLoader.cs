@@ -5,7 +5,7 @@ namespace GameEngine
     /// <summary>
     /// UI 预制体加载器。
     /// 框架默认使用 <see cref="DefaultUIViewLoader"/>（基于 Resources），
-    /// 游戏可替换为 Addressables / AssetBundle 等实现。
+    /// 游戏可替换为自定义 AssetBundle 等实现。
     /// </summary>
     public interface IUIViewLoader
     {

@@ -12,8 +12,10 @@ namespace GameClient
         {
             Platform.SetService(new PlatformImp());
             ManagerHub.Instance.Initialize();
-
-#if UNITY_EDITOR
+#if GAME_ASSET_AB
+            AssetManager.Instance.SetProvider(new AssetBundleAssetProvider("AssetBundles"));
+#else
+            AssetManager.Instance.SetProvider(new EditorAssetProvider());
             UIManager.Instance.SetLoader(new EditorUIViewLoader());
 #endif
         }

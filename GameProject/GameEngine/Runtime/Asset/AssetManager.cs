@@ -4,13 +4,46 @@ using UnityEngine;
 
 namespace GameEngine
 {
-    /// <summary>
-    /// 资源加载与缓存管理器。相同地址和类型共享底层加载操作，并按加载和释放次数计数。
-    /// 需要在主循环中调用 <see cref="Tick"/> 才会回收已过缓存期的资源。
-    /// </summary>
+    /// <summary>资源实例缓存配置。</summary>
+    public sealed class AssetLoadOptions
+    {
+        public int MaxInstanceCount = 8;
+        public float CacheDuration = 30f;
+        public Transform Parent;
+    }
+
+    /// <summary>一次异步资源加载或实例租借的句柄，使用结束后必须释放。</summary>
+    public sealed class AssetHandle<T> : IDisposable where T : UnityEngine.Object
+    {
+        private Action _release;
+
+        internal AssetHandle(T asset, Action release)
+        {
+            Asset = asset;
+            _release = release;
+        }
+
+        public T Asset { get; private set; }
+
+        public bool IsReleased => _release == null;
+
+        public void Release()
+        {
+            Action release = _release;
+            _release = null;
+            release?.Invoke();
+        }
+
+        public void Dispose()
+        {
+            Release();
+        }
+    }
+
+    /// <summary>资源加载与实例池管理器。所有资源都通过 LoadAsync 一个入口访问。</summary>
     public sealed class AssetManager : Singleton<AssetManager>, ILogin
     {
-        internal readonly struct AssetKey : IEquatable<AssetKey>
+        private readonly struct AssetKey : IEquatable<AssetKey>
         {
             public readonly string Address;
             public readonly Type Type;
@@ -21,77 +54,93 @@ namespace GameEngine
                 Type = type;
             }
 
-            public bool Equals(AssetKey other)
-            {
-                return Address == other.Address && Type == other.Type;
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is AssetKey other && Equals(other);
-            }
-
+            public bool Equals(AssetKey other) => Address == other.Address && Type == other.Type;
+            public override bool Equals(object obj) => obj is AssetKey other && Equals(other);
             public override int GetHashCode()
             {
                 unchecked
                 {
-                    return ((Address != null ? Address.GetHashCode() : 0) * 397) ^ Type.GetHashCode();
+                    return ((Address == null ? 0 : Address.GetHashCode()) * 397) ^ Type.GetHashCode();
                 }
             }
         }
 
-        internal sealed class CacheEntry
+        private sealed class CacheEntry
         {
             public AssetKey Key;
             public IAssetLoadOperation Operation;
             public int ReferenceCount;
             public float CacheDuration;
             public float ReleaseTime;
-            public readonly List<LoadCallback> Callbacks = new List<LoadCallback>();
+            public readonly List<LoadRequest> Requests = new List<LoadRequest>();
         }
 
-        internal sealed class LoadCallback
+        private sealed class LoadRequest
         {
             public Action<float> OnProgress;
             public Action<UnityEngine.Object> OnCompleted;
+            public AssetLoadOptions Options;
             public float LastProgress = -1f;
         }
 
+        private sealed class PooledInstance
+        {
+            public CacheEntry Entry;
+            public GameObject Instance;
+            public float ReleaseTime;
+            public bool InUse;
+        }
+
         private readonly Dictionary<AssetKey, CacheEntry> _entries = new Dictionary<AssetKey, CacheEntry>();
+        private readonly Dictionary<AssetKey, List<PooledInstance>> _instances = new Dictionary<AssetKey, List<PooledInstance>>();
         private readonly List<CacheEntry> _tickEntries = new List<CacheEntry>();
+        private readonly List<PooledInstance> _tickInstances = new List<PooledInstance>();
         private readonly List<CacheEntry> _expiredEntries = new List<CacheEntry>();
-        private readonly IAssetProvider _provider;
+        private IAssetProvider _provider;
         private float _time;
 
         public AssetManager()
         {
-            _provider = new AddressablesAssetProvider();
+            _provider = new AssetBundleAssetProvider("AssetBundles");
         }
 
         public int CachedAssetCount => _entries.Count;
 
-        /// <summary>
-        /// 异步加载资源。相同地址和类型只执行一次底层加载，每次调用增加一次引用。
-        /// 使用方不再需要资源时，必须调用 <see cref="Release{T}"/> 释放对应引用。
-        /// </summary>
-        /// <param name="address">由当前资源后端解释的资源地址。</param>
-        /// <param name="cacheDuration">最后一个引用释放后继续缓存的秒数，每个资源可独立设置。</param>
-        /// <param name="onProgress">加载进度变化时调用，范围为 0 到 1。</param>
-        /// <param name="onCompleted">加载完成时调用；加载失败时传入 null。</param>
-        public void LoadAsync<T>(
-            string address,
-            Action<T> onCompleted,
-            Action<float> onProgress = null,
-            float cacheDuration = 30f) where T : UnityEngine.Object
+        /// <summary>替换资源后端。替换时会清理已有资源句柄和实例。</summary>
+        public void SetProvider(IAssetProvider provider)
+        {
+            if (provider == null)
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (ReferenceEquals(_provider, provider))
+            {
+                return;
+            }
+
+            ClearAll();
+            _provider = provider;
+        }
+
+        /// <summary>唯一资源入口。普通资源返回资源句柄，GameObject 返回实例池句柄。</summary>
+        public void LoadAsync<T>(string address, Action<AssetHandle<T>> onCompleted, Action<float> onProgress = null, AssetLoadOptions options = null)
+            where T : UnityEngine.Object
         {
             if (string.IsNullOrEmpty(address))
             {
                 Log.Error("[AssetManager] LoadAsync 失败：address 不能为空。");
-                InvokeCompleted(onCompleted, null, address);
+                onCompleted?.Invoke(null);
                 return;
             }
 
+            options = Normalize(options);
             AssetKey key = new AssetKey(address, typeof(T));
+            if (typeof(T) == typeof(GameObject) && TryRentInstance(key, options.Parent, onCompleted))
+            {
+                return;
+            }
+
             if (!_entries.TryGetValue(key, out CacheEntry entry))
             {
                 IAssetLoadOperation operation;
@@ -102,65 +151,38 @@ namespace GameEngine
                 catch (Exception exception)
                 {
                     Log.Error($"[AssetManager] 启动资源加载失败：{address}", exception);
-                    InvokeCompleted(onCompleted, null, address);
+                    onCompleted?.Invoke(null);
                     return;
                 }
 
                 if (operation == null)
                 {
                     Log.Error($"[AssetManager] 资源后端返回了空加载操作：{address}");
-                    InvokeCompleted(onCompleted, null, address);
+                    onCompleted?.Invoke(null);
                     return;
                 }
 
-                entry = new CacheEntry
-                {
-                    Key = key,
-                    Operation = operation
-                };
+                entry = new CacheEntry { Key = key, Operation = operation };
                 _entries.Add(key, entry);
             }
 
             entry.ReferenceCount++;
-            entry.CacheDuration = Math.Max(0f, cacheDuration);
+            entry.CacheDuration = options.CacheDuration;
             entry.ReleaseTime = float.PositiveInfinity;
-            entry.Callbacks.Add(new LoadCallback
+            entry.Requests.Add(new LoadRequest
             {
                 OnProgress = onProgress,
-                OnCompleted = asset => onCompleted?.Invoke(asset as T)
+                Options = options,
+                OnCompleted = asset => CompleteRequest(entry, asset, options, onCompleted)
             });
         }
 
-        /// <summary>释放一次指定资源引用。引用归零后按该资源的缓存时间延迟卸载。</summary>
-        public void Release<T>(string address) where T : UnityEngine.Object
-        {
-            if (string.IsNullOrEmpty(address))
-            {
-                return;
-            }
-
-            AssetKey key = new AssetKey(address, typeof(T));
-            if (!_entries.TryGetValue(key, out CacheEntry entry) || entry.ReferenceCount <= 0)
-            {
-                Log.Warning($"[AssetManager] 释放了未持有的资源引用：{address} ({typeof(T).Name})");
-                return;
-            }
-
-            entry.ReferenceCount--;
-            if (entry.ReferenceCount == 0)
-            {
-                entry.ReleaseTime = _time + entry.CacheDuration;
-            }
-        }
-
-        /// <summary>推进缓存时间并释放到期资源，应传入不受 Time.timeScale 影响的帧间隔。</summary>
         public void Tick(float unscaledDeltaTime)
         {
             _time += Math.Max(0f, unscaledDeltaTime);
             _tickEntries.Clear();
             _tickEntries.AddRange(_entries.Values);
             _expiredEntries.Clear();
-
             for (int i = 0; i < _tickEntries.Count; i++)
             {
                 CacheEntry entry = _tickEntries[i];
@@ -175,19 +197,23 @@ namespace GameEngine
             {
                 ReleaseEntry(_expiredEntries[i]);
             }
-        }
 
-        public void ClearAll()
-        {
-            _expiredEntries.Clear();
-            _tickEntries.Clear();
-            _expiredEntries.AddRange(_entries.Values);
-            for (int i = 0; i < _expiredEntries.Count; i++)
+            _tickInstances.Clear();
+            foreach (List<PooledInstance> instances in _instances.Values)
             {
-                ReleaseEntry(_expiredEntries[i]);
+                _tickInstances.AddRange(instances);
             }
 
-            _expiredEntries.Clear();
+            for (int i = 0; i < _tickInstances.Count; i++)
+            {
+                PooledInstance pooled = _tickInstances[i];
+                if (!pooled.InUse && (pooled.Instance == null || _time >= pooled.ReleaseTime))
+                {
+                    _instances[pooled.Entry.Key].Remove(pooled);
+                    UnityEngine.Object.Destroy(pooled.Instance);
+                    ReleaseReference(pooled.Entry);
+                }
+            }
         }
 
         public void Login()
@@ -201,28 +227,120 @@ namespace GameEngine
             ClearAll();
         }
 
-        private void NotifyCallbacks(CacheEntry entry)
+        public void ClearAll()
         {
-            if (entry.Callbacks.Count == 0)
+            foreach (List<PooledInstance> instances in _instances.Values)
+            {
+                for (int i = 0; i < instances.Count; i++)
+                {
+                    UnityEngine.Object.Destroy(instances[i].Instance);
+                }
+            }
+
+            _instances.Clear();
+            _expiredEntries.Clear();
+            _expiredEntries.AddRange(_entries.Values);
+            for (int i = 0; i < _expiredEntries.Count; i++)
+            {
+                ReleaseEntry(_expiredEntries[i]);
+            }
+
+            _expiredEntries.Clear();
+        }
+
+        private bool TryRentInstance<T>(AssetKey key, Transform parent, Action<AssetHandle<T>> onCompleted) where T : UnityEngine.Object
+        {
+            if (!_instances.TryGetValue(key, out List<PooledInstance> instances))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < instances.Count; i++)
+            {
+                PooledInstance pooled = instances[i];
+                if (pooled.InUse)
+                {
+                    continue;
+                }
+
+                if (pooled.Instance == null)
+                {
+                    instances.RemoveAt(i--);
+                    ReleaseReference(pooled.Entry);
+                    continue;
+                }
+
+                pooled.InUse = true;
+                pooled.Instance.transform.SetParent(parent, false);
+                onCompleted?.Invoke(new AssetHandle<T>((T)(UnityEngine.Object)pooled.Instance, () => ReturnInstance(pooled)));
+                return true;
+            }
+
+            return false;
+        }
+
+        private void CompleteRequest<T>(CacheEntry entry, UnityEngine.Object asset, AssetLoadOptions options, Action<AssetHandle<T>> onCompleted) where T : UnityEngine.Object
+        {
+            if (asset == null)
+            {
+                onCompleted?.Invoke(null);
+                ReleaseReference(entry);
+                return;
+            }
+
+            if (typeof(T) != typeof(GameObject))
+            {
+                onCompleted?.Invoke(new AssetHandle<T>((T)asset, () => ReleaseReference(entry)));
+                return;
+            }
+
+            if (!_instances.TryGetValue(entry.Key, out List<PooledInstance> instances))
+            {
+                instances = new List<PooledInstance>();
+                _instances.Add(entry.Key, instances);
+            }
+
+            if (options.MaxInstanceCount > 0 && instances.Count >= options.MaxInstanceCount)
+            {
+                Log.Warning($"[AssetManager] GameObject 实例池已达到数量上限：{entry.Key.Address}");
+                onCompleted?.Invoke(null);
+                ReleaseReference(entry);
+                return;
+            }
+
+            PooledInstance pooled = new PooledInstance
+            {
+                Entry = entry,
+                Instance = UnityEngine.Object.Instantiate((GameObject)asset, options.Parent),
+                InUse = true
+            };
+            instances.Add(pooled);
+            onCompleted?.Invoke(new AssetHandle<T>((T)(UnityEngine.Object)pooled.Instance, () => ReturnInstance(pooled)));
+        }
+
+        private void ReturnInstance(PooledInstance pooled)
+        {
+            if (!pooled.InUse || pooled.Instance == null)
             {
                 return;
             }
 
+            pooled.InUse = false;
+            pooled.ReleaseTime = _time + pooled.Entry.CacheDuration;
+            pooled.Instance.SetActive(false);
+            pooled.Instance.transform.SetParent(null, false);
+        }
+
+        private void NotifyCallbacks(CacheEntry entry)
+        {
             float progress = entry.Operation.Progress;
-            for (int i = 0; i < entry.Callbacks.Count; i++)
+            for (int i = 0; i < entry.Requests.Count; i++)
             {
-                LoadCallback callback = entry.Callbacks[i];
-                if (!Mathf.Approximately(callback.LastProgress, progress))
+                LoadRequest request = entry.Requests[i];
+                if (!Mathf.Approximately(request.LastProgress, progress))
                 {
-                    callback.LastProgress = progress;
-                    try
-                    {
-                        callback.OnProgress?.Invoke(progress);
-                    }
-                    catch (Exception exception)
-                    {
-                        Log.Error($"[AssetManager] 资源进度回调异常：{entry.Key.Address}", exception);
-                    }
+                    request.LastProgress = progress;
+                    request.OnProgress?.Invoke(progress);
                 }
             }
 
@@ -237,19 +355,12 @@ namespace GameEngine
             }
 
             UnityEngine.Object asset = entry.Operation.Asset;
-            for (int i = 0; i < entry.Callbacks.Count; i++)
+            List<LoadRequest> requests = new List<LoadRequest>(entry.Requests);
+            entry.Requests.Clear();
+            for (int i = 0; i < requests.Count; i++)
             {
-                try
-                {
-                    entry.Callbacks[i].OnCompleted?.Invoke(asset);
-                }
-                catch (Exception exception)
-                {
-                    Log.Error($"[AssetManager] 资源完成回调异常：{entry.Key.Address}", exception);
-                }
+                requests[i].OnCompleted?.Invoke(asset);
             }
-
-            entry.Callbacks.Clear();
         }
 
         private void ReleaseEntry(CacheEntry entry)
@@ -259,26 +370,26 @@ namespace GameEngine
                 return;
             }
 
-            try
+            _provider.Release(entry.Operation);
+        }
+
+        private void ReleaseReference(CacheEntry entry)
+        {
+            entry.ReferenceCount--;
+            if (entry.ReferenceCount == 0)
             {
-                _provider.Release(entry.Operation);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[AssetManager] 释放资源失败：{entry.Key.Address}", exception);
+                entry.ReleaseTime = _time + entry.CacheDuration;
             }
         }
 
-        private static void InvokeCompleted<T>(Action<T> onCompleted, T asset, string address) where T : UnityEngine.Object
+        private static AssetLoadOptions Normalize(AssetLoadOptions options)
         {
-            try
+            return new AssetLoadOptions
             {
-                onCompleted?.Invoke(asset);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"[AssetManager] 资源完成回调异常：{address}", exception);
-            }
+                MaxInstanceCount = Math.Max(0, options == null ? 8 : options.MaxInstanceCount),
+                CacheDuration = Math.Max(0f, options == null ? 30f : options.CacheDuration),
+                Parent = options == null ? null : options.Parent
+            };
         }
     }
 }
